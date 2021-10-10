@@ -1,12 +1,12 @@
 # DirectShow VCam
 
 ## Why This Fork?
-I'm making another DirectShow VCam but the first bunch of work I needed to do was get this basic VCam building - so I thought I'd save my tweaks first as a base repo before I add further dependencies. By requiring the repos to be peer directories, we can avoid having to set some build properties by using relative paths, basically. Plus for some reason the baseclasses project was producing strmbase.lib outputs rather than BaseClasses.lib outputs - so rather than fork that repo too, I'll just roll with it and update the input libraries to expect strmbase/strmbasd in this project for linking to.
+I'm making another DirectShow VCam but the first bunch of work I needed to do was get this basic VCam building - so I thought I'd save my tweaks first as a base repo before I add further dependencies. By requiring the repos to be peer directories, we can avoid having to set some build properties by using relative paths, basically. Plus for some reason the baseclasses project was producing strmbase.lib outputs rather than BaseClasses.lib outputs - so rather than fork that repo too, I'll just roll with it and update the input libraries to expect strmbase/strmbasd in this project for linking to. (Maybe I didn't follow the instructions properly...)
 
 - Setup
   - Create a parent directory, e.g. VCam, cd into it
   - git clone this repo (but don't cd into it)
-  - git clone direct show samples repo (as a peer directory to this repo)
+  - git clone the Windows-classic-samples repo (as a peer directory to this repo)
   - Install Windows 10 SDK in its default location (mine installed to "C:\Program Files (x86)\Windows Kits\" ...)
 - Building, Registering with Windows
   - Build the directshow/baseclasses project in VS2019 Community (produces strmbase/strmbasd.lib outputs - build Win32/x64 and Debug/Release as needed)
