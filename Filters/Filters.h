@@ -1,5 +1,7 @@
 #pragma once
 
+#include "RealSenseCam.h"
+
 #define DECLARE_PTR(type, ptr, expr) type* ptr = (type*)(expr);
 
 EXTERN_C const GUID CLSID_VirtualCam;
@@ -16,8 +18,14 @@ public:
 
     IFilterGraph *GetGraph() {return m_pGraph;}
 
+    RealSenseCam m_realSenseCam;
+    bool m_connected;
+    BYTE* m_pBuffer;
+    int m_pBufferSize;
+
 private:
     CVCam(LPUNKNOWN lpunk, HRESULT *phr);
+    ~CVCam();
 };
 
 class CVCamStream : public CSourceStream, public IAMStreamConfig, public IKsPropertySet

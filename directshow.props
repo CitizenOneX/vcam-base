@@ -2,13 +2,14 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" >
+	  <RealSenseSdkDir>$(ProjectDir)..\..\librealsense</RealSenseSdkDir>
     <WindowsClassicSamplesDir>$(ProjectDir)..\..\Windows-classic-samples</WindowsClassicSamplesDir>
     <DirectShowSamplesDir>$(WindowsClassicSamplesDir)\Samples\Win7Samples\multimedia\directshow</DirectShowSamplesDir>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(DirectShowSamplesDir)\baseclasses</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(DirectShowSamplesDir)\baseclasses;$(RealSenseSdkDir)\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(DirectShowSamplesDir)\baseclasses\bin\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>

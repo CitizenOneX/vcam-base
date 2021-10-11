@@ -2,10 +2,13 @@
 #pragma warning(disable:4711)
 
 #include <streams.h>
-#include <stdio.h>
-#include <olectl.h>
-#include <dvdmedia.h>
+//#include <stdio.h>
+//#include <olectl.h>
+//#include <dvdmedia.h>
+
 #include "filters.h"
+#include "RealSenseCam.h"
+#include <librealsense2/rs.hpp>
 
 //////////////////////////////////////////////////////////////////////////
 //  CVCam is the source filter which masquerades as a capture device
@@ -18,13 +21,26 @@ CUnknown * WINAPI CVCam::CreateInstance(LPUNKNOWN lpunk, HRESULT *phr)
 }
 
 CVCam::CVCam(LPUNKNOWN lpunk, HRESULT *phr) : 
-    CSource(NAME("Virtual Cam"), lpunk, CLSID_VirtualCam)
+    CSource(NAME("VCam Realsense"), lpunk, CLSID_VirtualCam)
 {
     ASSERT(phr);
     CAutoLock cAutoLock(&m_cStateLock);
     // Create the one and only output pin
+    
+    // TODO confirm resolution
+    m_pBufferSize = 640 * 480 * 4;
+    m_pBuffer = new BYTE[m_pBufferSize];
+    m_connected = (m_realSenseCam.Init() == S_OK);
+
     m_paStreams = (CSourceStream **) new CVCamStream*[1];
-    m_paStreams[0] = new CVCamStream(phr, this, L"Virtual Cam");
+    m_paStreams[0] = new CVCamStream(phr, this, L"VCam Realsense");
+}
+
+CVCam::~CVCam()
+{
+    m_realSenseCam.UnInit();
+    delete m_paStreams[0];
+    delete[] m_paStreams;
 }
 
 HRESULT CVCam::QueryInterface(REFIID riid, void **ppv)
@@ -41,9 +57,11 @@ HRESULT CVCam::QueryInterface(REFIID riid, void **ppv)
 // all the stuff.
 //////////////////////////////////////////////////////////////////////////
 CVCamStream::CVCamStream(HRESULT *phr, CVCam *pParent, LPCWSTR pPinName) :
-    CSourceStream(NAME("Virtual Cam"),phr, pParent, pPinName), m_pParent(pParent)
+    CSourceStream(NAME("VCam Realsense"),phr, pParent, pPinName), m_pParent(pParent)
 {
     // Set the default media type as 320x240x24@15
+    // NB: Depth with USB2.1 is 320x240@30; RGB is 640x480@30; librealsense 
+    // should register/align them and provide one or both?
     GetMediaType(4, &m_mt);
 }
 
@@ -86,8 +104,15 @@ HRESULT CVCamStream::FillBuffer(IMediaSample *pms)
     long lDataLen;
     pms->GetPointer(&pData);
     lDataLen = pms->GetSize();
-    for(int i = 0; i < lDataLen; ++i)
-        pData[i] = rand();
+
+    if (m_pParent->m_connected)
+    {
+        m_pParent->m_realSenseCam.GetCamFrame(m_pParent->m_pBuffer, m_pParent->m_pBufferSize);
+        // then copy m_pBuffer data into pData[]?
+        //for (int i = 0; i < lDataLen; ++i)
+        //    pData[i] = rand();
+        memcpy(pData, m_pParent->m_pBuffer, min(m_pParent->m_pBufferSize, lDataLen));
+    }
 
     return NOERROR;
 } // FillBuffer
