@@ -4,12 +4,14 @@ I'm making a DirectShow VCam but the first bunch of work I needed to do was get 
 Note: Tag "vcam-base" contains these changes with no added dependencies.
 
 - Setup
-  - Create a parent directory, e.g. VCam, cd into it
-  - git clone this repo (but don't cd into it)
-  - git clone the Windows-classic-samples repo (as a peer directory to this repo)
-  - Install Windows 10 SDK in its default location (mine installed to "C:\Program Files (x86)\Windows Kits\" ...)
+  - Create a parent directory, e.g. VCam, then cd into it
+  - git clone [this repo](https://github.com/CitizenOneX/vcam-realsense) (but don't cd into it)
+  - git clone the [Windows-classic-samples repo](https://github.com/roman380/Windows-classic-samples) (as a peer directory to this repo)
+  - Install [Windows 10.0.19041 SDK](https://developer.microsoft.com/en-us/windows/downloads/sdk-archive/) in its default location (mine installed to "C:\Program Files (x86)\Windows Kits\" ...) - other versions may work, but are untested
+  - git clone the [Intel Realsense2 repo](https://github.com/IntelRealSense/librealsense) (as a peer directory to this repo)
 - Building, Registering with Windows
   - Build the directshow/baseclasses project in VS2019 Community (produces strmbase/strmbasd.lib outputs - build Win32/x64 and Debug/Release as needed)
+  - CMake, then build the Intel Realsense library in VS2019 Community (produces realsense2d.dll, realsense2.dll Debug/Release as needed)
   - Build the Filters project from this solution in VS2019 Community (produces Filters.dll in each of Win32/x64, Debug/Release as needed)
   - in the Filters.dll output directory of your chosen configuration(s), execute "regsvr32 Filters.dll" in an Administrator command prompt.
 - Testing
@@ -17,11 +19,11 @@ Note: Tag "vcam-base" contains these changes with no added dependencies.
   - Insert Filter / Video Capture Sources / Virtual Cam
   - Insert Filter / Direct Show Filters / Enhanced Video Renderer
   - Connect Output pin of Virtual Cam node to Input pin of Enhanced Video Renderer Node (Color Space Converter Node automatically appears)
-  - Press Play, see the Random static pattern in a pop-up window.
+  - Press Play, see the inverted colorized depth stream (for now). Currently copies buffers inefficiently, seems to be polling for frames way more often than 30fps etc. Much work to do.
 
 ## /End "Why This Fork?"
 
-Original work by [Vivek](https://groups.google.com/g/microsoft.public.win32.programmer.directx.video/c/1beZkSCb0KE/m/5VF366wR3CcJ); community evidently owes much to [The March Hare](https://web.archive.org/web/20060813155608/http://tmhare.mvps.org/) and [roman380](https://github.com/roman380/tmhare.mvps.org-vcam).
+Original work by [Vivek](https://groups.google.com/g/microsoft.public.win32.programmer.directx.video/c/1beZkSCb0KE/m/5VF366wR3CcJ); community evidently owes much to [The March Hare](https://web.archive.org/web/20060813155608/http://tmhare.mvps.org/) and [roman380](https://github.com/roman380/tmhare.mvps.org-vcam). I also took a look at [KinectCam](https://github.com/dsouzae/KinectCam)
 
 See also:
 
