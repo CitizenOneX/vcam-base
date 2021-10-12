@@ -27,10 +27,11 @@ CVCam::CVCam(LPUNKNOWN lpunk, HRESULT *phr) :
     CAutoLock cAutoLock(&m_cStateLock);
     // Create the one and only output pin
     
-    // TODO confirm resolution
-    m_pBufferSize = 640 * 480 * 4;
-    m_pBuffer = new BYTE[m_pBufferSize];
     m_connected = (m_realSenseCam.Init() == S_OK);
+
+    // TODO confirm connected resolution from realsense cam?
+    m_pBufferSize = 320 * 240 * 2; // depth stream is just 320x240xZ16 at USB 2.1, at the moment this is all I'm copying over
+    m_pBuffer = new BYTE[m_pBufferSize];
 
     m_paStreams = (CSourceStream **) new CVCamStream*[1];
     m_paStreams[0] = new CVCamStream(phr, this, L"VCam Realsense");
