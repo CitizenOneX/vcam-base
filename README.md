@@ -1,6 +1,6 @@
 # DirectShow VCam - Intel Realsense camera 3D pointcloud projection
 
-I'm making a DirectShow VCam but the first bunch of work I needed to do was get this basic VCam building - so I thought I'd save my tweaks first as a base repo before I add further dependencies. By requiring the repos to be peer directories, we can avoid having to set some build properties by using relative paths, basically. Plus for some reason the baseclasses project was producing strmbase.lib outputs rather than BaseClasses.lib outputs - so rather than fork that repo too, I'll just roll with it and update the input libraries to expect strmbase/strmbasd in this project for linking to. (Maybe I didn't follow the instructions properly...)
+I'm making a DirectShow VCam but the first little bit of work I needed to do was get this basic VCam building - so I thought I'd save my tweaks first as a base repo before I add further dependencies. By requiring the repos to be peer directories, we can avoid having to set some build properties by using relative paths, basically. Plus for some reason the baseclasses project was producing strmbase.lib outputs rather than BaseClasses.lib outputs - so rather than fork that repo too, I'll just roll with it and update the input libraries to expect strmbase/strmbasd in this project for linking to. (Maybe I didn't follow the instructions properly...)
 Note: Tag "vcam-base" contains these changes with no added dependencies.
 
 - Setup
