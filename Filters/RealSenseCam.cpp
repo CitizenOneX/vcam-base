@@ -7,9 +7,9 @@ HRESULT RealSenseCam::Init()
 	m_pPipeline = new rs2::pipeline();
 
 	m_pCfg = new rs2::config();
-	m_pCfg->enable_stream(RS2_STREAM_DEPTH);
-	//m_pCfg->enable_stream(RS2_STREAM_COLOR);
-	m_pProfile = &m_pPipeline->start(*m_pCfg);
+	//m_pCfg->enable_stream(RS2_STREAM_DEPTH);
+	m_pCfg->enable_stream(RS2_STREAM_INFRARED);
+	m_pProfile = &m_pPipeline->start();//*m_pCfg);
 
 	//m_pAlignToDepth = new rs2::align(RS2_STREAM_DEPTH);
 
@@ -31,9 +31,10 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 
 	// align the color frame to the depth frame (so we end up with the smaller depth frame with color mapped onto it)
 	//frames = m_pAlignToDepth->process(frames);
-	auto depth = frames.get_depth_frame();
+	//auto depth = frames.get_depth_frame();
 	// colorize the depth data with the default color map
-	auto colorized_depth = m_pColorizer->colorize(depth);
+	//auto colorized_depth = m_pColorizer->colorize(depth);
+	auto ir = frames.get_infrared_frame();
 
 	// TODO For now just copy the colorized depth frame over to the framebuffer
 	// wait, this could have been a single memcpy...
@@ -41,7 +42,8 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 	//{
 	//	frameBuffer[i] = ((BYTE*)colorized_depth.get_data())[i];
 	//}
-	memcpy(frameBuffer, colorized_depth.get_data(), min(frameSize, colorized_depth.get_data_size()));
+	//memcpy(frameBuffer, colorized_depth.get_data(), min(frameSize, colorized_depth.get_data_size()));
+	memcpy(frameBuffer, ir.get_data(), min(frameSize, ir.get_data_size()));
 
 	// TODO - plenty:
 	// fetch RGB and Depth frames as point cloud
