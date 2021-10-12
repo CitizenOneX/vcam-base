@@ -8,10 +8,10 @@ HRESULT RealSenseCam::Init()
 
 	m_pCfg = new rs2::config();
 	m_pCfg->enable_stream(RS2_STREAM_DEPTH);
-	m_pCfg->enable_stream(RS2_STREAM_COLOR);
+	//m_pCfg->enable_stream(RS2_STREAM_COLOR);
 	m_pProfile = &m_pPipeline->start(*m_pCfg);
 
-	m_pAlignToDepth = new rs2::align(RS2_STREAM_DEPTH);
+	//m_pAlignToDepth = new rs2::align(RS2_STREAM_DEPTH);
 
 	return *m_pProfile ? S_OK : E_FAIL;
 }
@@ -26,10 +26,13 @@ void RealSenseCam::UnInit()
 
 void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 {
-	//// Block program until frames arrive
+	// Block program until frames arrive
 	rs2::frameset frames = m_pPipeline->wait_for_frames();
-	frames = m_pAlignToDepth->process(frames);
+
+	// align the color frame to the depth frame (so we end up with the smaller depth frame with color mapped onto it)
+	//frames = m_pAlignToDepth->process(frames);
 	auto depth = frames.get_depth_frame();
+	// colorize the depth data with the default color map
 	auto colorized_depth = m_pColorizer->colorize(depth);
 
 	// TODO For now just copy the colorized depth frame over to the framebuffer
