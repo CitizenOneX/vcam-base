@@ -11,9 +11,10 @@ Note: Tag "vcam-base" contains these changes with no added dependencies.
   - git clone the [Intel Realsense2 repo](https://github.com/IntelRealSense/librealsense) (as a peer directory to this repo)
 - Building, Registering with Windows
   - Build the directshow/baseclasses project in VS2019 Community (produces strmbase/strmbasd.lib outputs - build Win32/x64 and Debug/Release as needed)
-  - CMake, then build the Intel Realsense library in VS2019 Community (produces realsense2d.dll, realsense2.dll Debug/Release as needed)
+  - CMake, then build the Intel Realsense library in VS2019 Community (produces realsense2d.dll, realsense2.dll Debug/Release as needed, as well as realsense2.lib files, plus has the RealSense C++ header files for inclusion)
   - Build the Filters project from this solution in VS2019 Community (produces Filters.dll in each of Win32/x64, Debug/Release as needed)
   - in the Filters.dll output directory of your chosen configuration(s), execute "regsvr32 Filters.dll" in an Administrator command prompt.
+  - Copy the corresponding 32/64 Debug/Release realsense2.dll alongside Filters.dll files (they need to be found at runtime)
 - Testing
   - Open graph edit: e.g. To see 64-bit Filters.dll filters, use C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\graphedt.exe
   - Insert Filter / Video Capture Sources / Virtual Cam
