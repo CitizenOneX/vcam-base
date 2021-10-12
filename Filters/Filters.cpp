@@ -160,7 +160,7 @@ HRESULT CVCamStream::GetMediaType(int iPosition, CMediaType *pmt)
     pvi->bmiHeader.biSizeImage  = GetBitmapSize(&pvi->bmiHeader);
     pvi->bmiHeader.biClrImportant = 0;
 
-    pvi->AvgTimePerFrame = 1000000;
+    pvi->AvgTimePerFrame = 333333;
 
     SetRectEmpty(&(pvi->rcSource)); // we want the whole image area rendered.
     SetRectEmpty(&(pvi->rcTarget)); // no particular destination rectangle
@@ -297,8 +297,8 @@ HRESULT STDMETHODCALLTYPE CVCamStream::GetStreamCaps(int iIndex, AM_MEDIA_TYPE *
     pvscc->StretchTapsY = 0;
     pvscc->ShrinkTapsX = 0;
     pvscc->ShrinkTapsY = 0;
-    pvscc->MinFrameInterval = 200000;   //50 fps
-    pvscc->MaxFrameInterval = 50000000; // 0.2 fps
+    pvscc->MinFrameInterval = 333333;   // 30 fps
+    pvscc->MaxFrameInterval = 333333; // 30 fps
     pvscc->MinBitsPerSecond = (80 * 60 * 3 * 8) / 5;
     pvscc->MaxBitsPerSecond = 640 * 480 * 3 * 8 * 50;
 
