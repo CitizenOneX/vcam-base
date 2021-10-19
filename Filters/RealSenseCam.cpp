@@ -74,7 +74,8 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 		//auto depth = frames.get_depth_frame();
 		// colorize the depth data with the default color map
 		//auto colorized_depth = m_pColorizer->colorize(depth);
-		auto ir = frames.get_infrared_frame();
+		//auto ir = frames.get_infrared_frame();
+		auto depth = frames.get_depth_frame();
 
 		// TODO For now just copy the colorized depth frame over to the framebuffer
 		// wait, this could have been a single memcpy...
@@ -83,7 +84,8 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 		//	frameBuffer[i] = ((BYTE*)colorized_depth.get_data())[i];
 		//}
 		//memcpy(frameBuffer, colorized_depth.get_data(), min(frameSize, colorized_depth.get_data_size()));
-		memcpy(frameBuffer, ir.get_data(), min(frameSize, ir.get_data_size()));
+		//memcpy(frameBuffer, ir.get_data(), min(frameSize, ir.get_data_size()));
+		memcpy(frameBuffer, depth.get_data(), min(frameSize, depth.get_data_size()));
 
 		// TODO - plenty:
 		// fetch RGB and Depth frames as point cloud
