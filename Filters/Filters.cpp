@@ -30,10 +30,10 @@ CVCam::CVCam(LPUNKNOWN lpunk, HRESULT *phr) :
     m_connected = (m_realSenseCam.Init() == S_OK);
 
     // TODO confirm connected resolution from realsense cam?
-    // depth stream is just 320x240xZ16 at USB 2.1, at the moment this is all I'm copying over
-    // output stream should be 320x240x3 (24-bit RGB) so use that for now
+    // depth stream is just 320x240xZ16 at USB 2.1, at the moment
+    // output stream should be 320x240x3 (24-bit RGB) so use that
     // or just use 320x240x1 for InfraRed stream
-    m_pBufferSize = 320 * 240 * 2;
+    m_pBufferSize = 320 * 240 * 3;
     m_pBuffer = new BYTE[m_pBufferSize];
 
     m_paStreams = (CSourceStream **) new CVCamStream*[1];
@@ -115,15 +115,16 @@ HRESULT CVCamStream::FillBuffer(IMediaSample *pms)
         // then copy m_pBuffer data into pData[]
         // can't use memcpy directly to get the IR bytes into each of the R, G, B channels
         // might as well flip the image the right way up while we're here
-        int pixelCount = m_pParent->m_pBufferSize / 2;
+        /*int pixelCount = m_pParent->m_pBufferSize / 2;
         for (int i = 0; i < pixelCount; ++i)
         {
             BYTE depthVal = m_pParent->m_pBuffer[2 * (pixelCount - i) - 1];
             pData[3 * i] = depthVal;
             pData[3 * i + 1] = depthVal;
             pData[3 * i + 2] = depthVal;
-        }
-        //memcpy(pData, m_pParent->m_pBuffer, min(m_pParent->m_pBufferSize, lDataLen));
+        }*/
+        // now that GetCamFrame copies an RGB buffer, copy it straight over
+        memcpy(pData, m_pParent->m_pBuffer, min(m_pParent->m_pBufferSize, lDataLen));
     }
 
     return NOERROR;

@@ -14,7 +14,9 @@ HRESULT RealSenseCam::Init()
 	m_pCfg->disable_all_streams();
 	m_pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
 	m_pCfg->enable_stream(RS2_STREAM_INFRARED, 320, 240, RS2_FORMAT_Y8, 30);
-	
+	// TODO rebuild librealsense without OpenMP, and link with Release lib to avoid 100% CPU utilisation when using color stream
+	//m_pCfg->enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);
+
 	if (m_pCfg->can_resolve(((std::shared_ptr<rs2_pipeline>)*m_pPipeline)))
 	{
 		m_pProfile = &m_pPipeline->start(*m_pCfg);  
@@ -45,7 +47,7 @@ HRESULT RealSenseCam::Init()
 				OutputDebugStringA("\n");
 			}
 
-			//m_pAlignToDepth = new rs2::align(RS2_STREAM_DEPTH);
+			m_pAlignToDepth = new rs2::align(RS2_STREAM_DEPTH);
 
 			return S_OK;
 		}
@@ -66,16 +68,19 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 {
 	if (m_pPipeline != NULL)
 	{
-		// Block program until frames arrive
+		// Block program until frames arrive if we need to, but take the most recent and discard older frames
 		rs2::frameset frames = m_pPipeline->wait_for_frames();
 
 		// align the color frame to the depth frame (so we end up with the smaller depth frame with color mapped onto it)
-		//frames = m_pAlignToDepth->process(frames);
-		//auto depth = frames.get_depth_frame();
-		// colorize the depth data with the default color map
-		//auto colorized_depth = m_pColorizer->colorize(depth);
-		//auto ir = frames.get_infrared_frame();
+		// TODO color frames will only be reenabled after I rebuild realsense with OpenMP set to FALSE, since it results
+		// in 100% CPU utilisation when handling color frames by the looks
+		frames = m_pAlignToDepth->process(frames);
 		auto depth = frames.get_depth_frame();
+
+		// colorize the depth data with the default color map
+		auto colorized_depth = m_pColorizer->colorize(depth);
+		//auto colorized_depth = depth;
+		//auto ir = frames.get_infrared_frame();
 
 		// TODO For now just copy the colorized depth frame over to the framebuffer
 		// wait, this could have been a single memcpy...
@@ -83,12 +88,14 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 		//{
 		//	frameBuffer[i] = ((BYTE*)colorized_depth.get_data())[i];
 		//}
-		//memcpy(frameBuffer, colorized_depth.get_data(), min(frameSize, colorized_depth.get_data_size()));
+		memcpy(frameBuffer, colorized_depth.get_data(), min(frameSize, colorized_depth.get_data_size()));
 		//memcpy(frameBuffer, ir.get_data(), min(frameSize, ir.get_data_size()));
-		memcpy(frameBuffer, depth.get_data(), min(frameSize, depth.get_data_size()));
+		//memcpy(frameBuffer, depth.get_data(), min(frameSize, depth.get_data_size()));
 
 		// TODO - plenty:
 		// fetch RGB and Depth frames as point cloud
 		// project colorized point cloud to the 2D frame
+		// refer to rs-gl sample for OpenGL-accelerated implementation; just copy the rendered texture back to CPU memory rather than use a gl window
+		// https://github.com/IntelRealSense/librealsense/tree/master/examples/gl
 	}
 }
