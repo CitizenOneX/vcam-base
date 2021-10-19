@@ -30,7 +30,10 @@ CVCam::CVCam(LPUNKNOWN lpunk, HRESULT *phr) :
     m_connected = (m_realSenseCam.Init() == S_OK);
 
     // TODO confirm connected resolution from realsense cam?
-    m_pBufferSize = 320 * 240 * 2; // depth stream is just 320x240xZ16 at USB 2.1, at the moment this is all I'm copying over
+    // depth stream is just 320x240xZ16 at USB 2.1, at the moment this is all I'm copying over
+    // output stream should be 320x240x3 (24-bit RGB) so use that for now
+    // or just use 320x240x1 for InfraRed stream at the moment
+    m_pBufferSize = 320 * 240 * 1;
     m_pBuffer = new BYTE[m_pBufferSize];
 
     m_paStreams = (CSourceStream **) new CVCamStream*[1];
@@ -109,10 +112,17 @@ HRESULT CVCamStream::FillBuffer(IMediaSample *pms)
     if (m_pParent->m_connected)
     {
         m_pParent->m_realSenseCam.GetCamFrame(m_pParent->m_pBuffer, m_pParent->m_pBufferSize);
-        // then copy m_pBuffer data into pData[]?
-        //for (int i = 0; i < lDataLen; ++i)
-        //    pData[i] = rand();
-        memcpy(pData, m_pParent->m_pBuffer, min(m_pParent->m_pBufferSize, lDataLen));
+        // then copy m_pBuffer data into pData[]
+        // can't use memcpy directly to get the IR bytes into each of the R, G, B channels
+        // might as well flip the image the right way up while we're here
+        for (int i = 0; i < m_pParent->m_pBufferSize; ++i)
+        {
+            BYTE irVal = m_pParent->m_pBuffer[m_pParent->m_pBufferSize - i - 1];
+            pData[3 * i] = irVal;
+            pData[3 * i + 1] = irVal;
+            pData[3 * i + 2] = irVal;
+        }
+        //memcpy(pData, m_pParent->m_pBuffer, min(m_pParent->m_pBufferSize, lDataLen));
     }
 
     return NOERROR;
@@ -277,12 +287,12 @@ HRESULT STDMETHODCALLTYPE CVCamStream::GetStreamCaps(int iIndex, AM_MEDIA_TYPE *
     
     pvscc->guid = FORMAT_VideoInfo;
     pvscc->VideoStandard = AnalogVideo_None;
-    pvscc->InputSize.cx = 640;
-    pvscc->InputSize.cy = 480;
+    pvscc->InputSize.cx = 80 * iIndex;
+    pvscc->InputSize.cy = 60 * iIndex;
     pvscc->MinCroppingSize.cx = 80;
     pvscc->MinCroppingSize.cy = 60;
-    pvscc->MaxCroppingSize.cx = 640;
-    pvscc->MaxCroppingSize.cy = 480;
+    pvscc->MaxCroppingSize.cx = 80 * iIndex;
+    pvscc->MaxCroppingSize.cy = 60 * iIndex;
     pvscc->CropGranularityX = 80;
     pvscc->CropGranularityY = 60;
     pvscc->CropAlignX = 0;
@@ -290,8 +300,8 @@ HRESULT STDMETHODCALLTYPE CVCamStream::GetStreamCaps(int iIndex, AM_MEDIA_TYPE *
 
     pvscc->MinOutputSize.cx = 80;
     pvscc->MinOutputSize.cy = 60;
-    pvscc->MaxOutputSize.cx = 640;
-    pvscc->MaxOutputSize.cy = 480;
+    pvscc->MaxOutputSize.cx = 80 * iIndex;
+    pvscc->MaxOutputSize.cy = 60 * iIndex;
     pvscc->OutputGranularityX = 0;
     pvscc->OutputGranularityY = 0;
     pvscc->StretchTapsX = 0;
@@ -300,8 +310,8 @@ HRESULT STDMETHODCALLTYPE CVCamStream::GetStreamCaps(int iIndex, AM_MEDIA_TYPE *
     pvscc->ShrinkTapsY = 0;
     pvscc->MinFrameInterval = 333333;   // 30 fps
     pvscc->MaxFrameInterval = 333333; // 30 fps
-    pvscc->MinBitsPerSecond = (80 * 60 * 3 * 8) / 5;
-    pvscc->MaxBitsPerSecond = 640 * 480 * 3 * 8 * 50;
+    pvscc->MinBitsPerSecond = (80 * 60 * 3 * 8) * 30;
+    pvscc->MaxBitsPerSecond = (80 * iIndex) * (60 * iIndex) * 3 * 8 * 30;
 
     return S_OK;
 }
