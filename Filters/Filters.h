@@ -19,9 +19,8 @@ public:
     IFilterGraph *GetGraph() {return m_pGraph;}
 
     RealSenseCam m_realSenseCam;
+    RealSenseCamType m_type;
     bool m_connected;
-    BYTE* m_pBuffer;
-    int m_pBufferSize;
 
 private:
     CVCam(LPUNKNOWN lpunk, HRESULT *phr);
