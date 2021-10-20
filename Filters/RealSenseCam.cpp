@@ -8,15 +8,16 @@ HRESULT RealSenseCam::Init()
 
 	// Set up the persistent objects used by the RealSenseCam
 	m_pPipeline = new rs2::pipeline();
-	m_pColorizer = new rs2::colorizer(); // TODO we won't need this in the end when we use actual RGB values aligned to depth
+	//m_pColorizer = new rs2::colorizer(); // TODO we won't need this in the end when we use actual RGB values aligned to depth
+	m_pPointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
+	m_pPoints = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
 
 	// set up the config object for the desired device/streams pipeline
 	rs2::config* pCfg = new rs2::config();
 	pCfg->disable_all_streams();
 	pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
 	pCfg->enable_stream(RS2_STREAM_INFRARED, 320, 240, RS2_FORMAT_Y8, 30);  // TODO won't need this with RGB
-	// TODO rebuild librealsense without OpenMP, and link with Release lib to avoid 100% CPU utilisation when using color stream
-	//m_pCfg->enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);
+	pCfg->enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
 
 	if (pCfg->can_resolve(((std::shared_ptr<rs2_pipeline>)*m_pPipeline)))
 	{
@@ -72,13 +73,20 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 		// align the color frame to the depth frame (so we end up with the smaller depth frame with color mapped onto it)
 		// TODO color frames will only be reenabled after I rebuild realsense with OpenMP set to FALSE, since it results
 		// in 100% CPU utilisation when handling color frames by the looks
-		frames = m_pAlignToDepth->process(frames);
-		auto depth = frames.get_depth_frame();
+		//frames = m_pAlignToDepth->process(frames);
+		
+		// now pull the individual frames and process
+		//auto depth = frames.get_depth_frame();
 
 		// colorize the depth data with the default color map
-		auto colorized_depth = m_pColorizer->colorize(depth);
+		//auto colorized_depth = m_pColorizer->colorize(depth);
 		//auto colorized_depth = depth;
-		//auto ir = frames.get_infrared_frame();
+
+		auto ir = frames.get_infrared_frame();
+		//auto color = frames.get_color_frame();
+		
+		//m_pPointCloud->map_to(ir);
+		//m_pPoints = &m_pPointCloud->calculate(depth);
 
 		// TODO For now just copy the colorized depth frame over to the framebuffer
 		// wait, this could have been a single memcpy...
@@ -86,8 +94,9 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 		//{
 		//	frameBuffer[i] = ((BYTE*)colorized_depth.get_data())[i];
 		//}
-		memcpy(frameBuffer, colorized_depth.get_data(), min(frameSize, colorized_depth.get_data_size()));
-		//memcpy(frameBuffer, ir.get_data(), min(frameSize, ir.get_data_size()));
+		//memcpy(frameBuffer, colorized_depth.get_data(), min(frameSize, colorized_depth.get_data_size()));
+		memcpy(frameBuffer, ir.get_data(), min(frameSize, ir.get_data_size()));
+		//memcpy(frameBuffer, color.get_data(), min(frameSize, color.get_data_size()));
 		//memcpy(frameBuffer, depth.get_data(), min(frameSize, depth.get_data_size()));
 
 		// TODO - plenty:

@@ -33,7 +33,18 @@ CVCam::CVCam(LPUNKNOWN lpunk, HRESULT *phr) :
     // depth stream is just 320x240xZ16 at USB 2.1, at the moment
     // output stream should be 320x240x3 (24-bit RGB) so use that
     // or just use 320x240x1 for InfraRed stream
-    m_pBufferSize = 320 * 240 * 3;
+
+    // We ask the RealSenseCam class to render into this buffer
+    // TODO It needs to match the final MediaSample buffer for now, but 
+    // in future we could probably pass the underlying buffer itself
+    // to RealSenseCam and save doing the copy.
+    // Note that just because the Depth camera samples at say 320x240
+    // Doesn't mean that we can't render the 3d pointcloud projection
+    // at a different resolution; we set that resolution here.
+    // 
+    m_pBufferSize = 320 * 240 * 1; // IR
+    //m_pBufferSize = 320 * 240 * 3; // colorized depth, aligned RGB to depth
+    //m_pBufferSize = 640 * 480 * 3; // RGB on its own
     m_pBuffer = new BYTE[m_pBufferSize];
 
     m_paStreams = (CSourceStream **) new CVCamStream*[1];
@@ -63,10 +74,11 @@ HRESULT CVCam::QueryInterface(REFIID riid, void **ppv)
 CVCamStream::CVCamStream(HRESULT *phr, CVCam *pParent, LPCWSTR pPinName) :
     CSourceStream(NAME("VCam Realsense"),phr, pParent, pPinName), m_pParent(pParent)
 {
-    // Set the default media type as 320x240x24@15
-    // NB: Depth with USB2.1 is 320x240@30; RGB is 640x480@30; librealsense 
-    // should register/align them and provide one or both?
-    GetMediaType(4, &m_mt);
+    // Set the default media type
+    // Note the output size here doesn't need to match input sensor resolution
+    // but for now we're using either 320x240 or 640x480 presets anyway
+    GetMediaType(4, &m_mt); // depth, 320x240 size
+    //GetMediaType(8, &m_mt); // color only, 640x480 size
 }
 
 CVCamStream::~CVCamStream()
@@ -111,20 +123,22 @@ HRESULT CVCamStream::FillBuffer(IMediaSample *pms)
 
     if (m_pParent->m_connected)
     {
+        // TODO should send pData and lDataLen directly to GetCamFrame
         m_pParent->m_realSenseCam.GetCamFrame(m_pParent->m_pBuffer, m_pParent->m_pBufferSize);
         // then copy m_pBuffer data into pData[]
         // can't use memcpy directly to get the IR bytes into each of the R, G, B channels
         // might as well flip the image the right way up while we're here
-        /*int pixelCount = m_pParent->m_pBufferSize / 2;
+        // TODO GetCamFrame could/should do the inversion
+        int pixelCount = m_pParent->m_pBufferSize;
         for (int i = 0; i < pixelCount; ++i)
         {
-            BYTE depthVal = m_pParent->m_pBuffer[2 * (pixelCount - i) - 1];
+            BYTE depthVal = m_pParent->m_pBuffer[(pixelCount - i) - 1];
             pData[3 * i] = depthVal;
             pData[3 * i + 1] = depthVal;
             pData[3 * i + 2] = depthVal;
-        }*/
+        }
         // now that GetCamFrame copies an RGB buffer, copy it straight over
-        memcpy(pData, m_pParent->m_pBuffer, min(m_pParent->m_pBufferSize, lDataLen));
+        //memcpy(pData, m_pParent->m_pBuffer, min(m_pParent->m_pBufferSize, lDataLen));
     }
 
     return NOERROR;
