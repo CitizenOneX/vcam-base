@@ -5,7 +5,7 @@
 #include <windows.h>
 #include <librealsense2/rs.hpp>
 
-enum RealSenseCamType
+enum class RealSenseCamType
 {
 	IR,
 	Color,

@@ -16,33 +16,33 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 
 	switch (m_Type)
 	{
-	case IR:
+	case RealSenseCamType::IR:
 		pCfg->enable_stream(RS2_STREAM_INFRARED, 320, 240, RS2_FORMAT_Y8, 30);  // TODO won't need this with RGB
 		break;
-	case Color:
+	case RealSenseCamType::Color:
 		pCfg->enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
 		break;
-	case ColorizedDepth:
+	case RealSenseCamType::ColorizedDepth:
 		pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
 		m_pColorizer = new rs2::colorizer(); // TODO we won't need this in the end when we use actual RGB values aligned to depth
 		break;
-	case ColorAlignedDepth:
+	case RealSenseCamType::ColorAlignedDepth:
 		pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
 		pCfg->enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
 		m_pAlignToDepth = new rs2::align(RS2_STREAM_DEPTH);
 		break;
-	case PointCloud:
+	case RealSenseCamType::PointCloud:
 		pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
 		m_pPointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
 		m_pPoints = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
 		break;
-	case PointCloudIR:
+	case RealSenseCamType::PointCloudIR:
 		pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
 		pCfg->enable_stream(RS2_STREAM_INFRARED, 320, 240, RS2_FORMAT_Y8, 30);  // TODO won't need this with RGB
 		m_pPointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
 		m_pPoints = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
 		break;
-	case PointCloudColor:
+	case RealSenseCamType::PointCloudColor:
 		pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
 		pCfg->enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
 		m_pPointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
@@ -144,7 +144,7 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 
 		switch (m_Type)
 		{
-		case IR:
+		case RealSenseCamType::IR:
 			{
 				// IR is 1 byte per pixel so we need to copy to R, G and B
 				// might as well invert while we're there
@@ -152,19 +152,19 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 				invert8bppToRGB(frameBuffer, frameSize, ir);
 			}
 			break;
-		case Color:
+		case RealSenseCamType::Color:
 			{
 				auto color = frames.get_color_frame();
 				invert24bppToRGB(frameBuffer, frameSize, color);
 			}
 			break;
-		case ColorizedDepth:
+		case RealSenseCamType::ColorizedDepth:
 			{
 				auto colorized_depth = m_pColorizer->colorize(frames.get_depth_frame());
 				invert24bppToRGB(frameBuffer, frameSize, colorized_depth);
 			}
 			break;
-		case ColorAlignedDepth:
+		case RealSenseCamType::ColorAlignedDepth:
 			{
 				// align the color frame to the depth frame (so we end up with the smaller depth frame with color mapped onto it)
 				// TODO color frames will only be reenabled after I rebuild realsense with OpenMP set to FALSE, since it results
@@ -174,14 +174,14 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 				invert24bppToRGB(frameBuffer, frameSize, color);
 			}
 			break;
-		case PointCloud:
+		case RealSenseCamType::PointCloud:
 			{
 				auto depth = frames.get_depth_frame();
 				m_pPoints = &m_pPointCloud->calculate(depth);
 				// TODO copy to framebuffer
 			}
 			break;
-		case PointCloudIR:
+		case RealSenseCamType::PointCloudIR:
 			{
 				auto depth = frames.get_depth_frame();
 				auto ir = frames.get_infrared_frame();
@@ -190,7 +190,7 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 				// TODO copy to framebuffer
 			}
 			break;
-		case PointCloudColor:
+		case RealSenseCamType::PointCloudColor:
 			{
 				auto depth = frames.get_depth_frame();
 				auto color = frames.get_color_frame();

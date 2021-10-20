@@ -19,7 +19,7 @@ public:
     IFilterGraph *GetGraph() {return m_pGraph;}
 
     RealSenseCam m_realSenseCam;
-    RealSenseCamType m_type;
+    RealSenseCamType m_type = RealSenseCamType::ColorizedDepth;
     bool m_connected;
 
 private:

@@ -23,9 +23,6 @@ CVCam::CVCam(LPUNKNOWN lpunk, HRESULT *phr) :
     ASSERT(phr);
     CAutoLock cAutoLock(&m_cStateLock);
 
-    // TODO configure which stream we want right here
-    m_type = RealSenseCamType::ColorAlignedDepth;
-
     // Create the one and only output pin
     m_connected = (m_realSenseCam.Init(m_type) == S_OK);
 
@@ -61,15 +58,15 @@ CVCamStream::CVCamStream(HRESULT *phr, CVCam *pParent, LPCWSTR pPinName) :
     // but for now we're using either 320x240 or 640x480 presets anyway
     switch (pParent->m_type)
     {
-    case IR:
-    case ColorizedDepth:
-    case ColorAlignedDepth:
+    case RealSenseCamType::IR:
+    case RealSenseCamType::ColorizedDepth:
+    case RealSenseCamType::ColorAlignedDepth:
         GetMediaType(4, &m_mt); // 320x240x3 size
         break;
-    case Color:
-    case PointCloud:
-    case PointCloudIR:
-    case PointCloudColor:
+    case RealSenseCamType::Color:
+    case RealSenseCamType::PointCloud:
+    case RealSenseCamType::PointCloudIR:
+    case RealSenseCamType::PointCloudColor:
         GetMediaType(8, &m_mt); // 640x480x3 size
         break;
     default:
