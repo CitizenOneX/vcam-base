@@ -13,10 +13,8 @@ public:
 	void GetCamFrame(BYTE* frameBuffer, int frameSize);
 private:
 	rs2::pipeline *m_pPipeline;
-	rs2::pipeline_profile *m_pProfile;
-	rs2::config *m_pCfg;
-	rs2::colorizer *m_pColorizer;             // Helper to colorize depth images
-	// Define the align object. It will be used to align to depth viewport.
-	rs2::align *m_pAlignToDepth;
+	rs2::align *m_pAlignToDepth;	// Define the align object. It will be used to align RGB to depth
+	rs2::pointcloud* m_pPointCloud;	// RS2 pointcloud helper
 
+	rs2::colorizer* m_pColorizer;	// TODO Helper to colorize depth images - not needed when RGB colors are used
 };

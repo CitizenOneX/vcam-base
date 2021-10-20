@@ -6,24 +6,23 @@ HRESULT RealSenseCam::Init()
 	rs2::log_to_console(RS2_LOG_SEVERITY_DEBUG);
 	rs2::log(RS2_LOG_SEVERITY_DEBUG, "Starting Init()");
 
-	// TODO might use data from the profile at initialisation, e.g. frame dimensions etc.
-	m_pColorizer = new rs2::colorizer();
+	// Set up the persistent objects used by the RealSenseCam
 	m_pPipeline = new rs2::pipeline();
+	m_pColorizer = new rs2::colorizer(); // TODO we won't need this in the end when we use actual RGB values aligned to depth
 
-	m_pCfg = new rs2::config();
-	m_pCfg->disable_all_streams();
-	m_pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
-	m_pCfg->enable_stream(RS2_STREAM_INFRARED, 320, 240, RS2_FORMAT_Y8, 30);
+	// set up the config object for the desired device/streams pipeline
+	rs2::config* pCfg = new rs2::config();
+	pCfg->disable_all_streams();
+	pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
+	pCfg->enable_stream(RS2_STREAM_INFRARED, 320, 240, RS2_FORMAT_Y8, 30);  // TODO won't need this with RGB
 	// TODO rebuild librealsense without OpenMP, and link with Release lib to avoid 100% CPU utilisation when using color stream
 	//m_pCfg->enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);
 
-	if (m_pCfg->can_resolve(((std::shared_ptr<rs2_pipeline>)*m_pPipeline)))
+	if (pCfg->can_resolve(((std::shared_ptr<rs2_pipeline>)*m_pPipeline)))
 	{
-		m_pProfile = &m_pPipeline->start(*m_pCfg);  
-		// TODO I think this profile isn't the same as what is returned by get_active_profile()...
-		// Could be that I'm not handling the std::shared_ptr<rs2_pipeline_profile>() smart pointer business properly
-		
-		// Debug logging to work out which streams we got in our profile
+		m_pPipeline->start(*pCfg);  
+
+		// Debug logging to work out which devices/streams we got in our profile
 		OutputDebugStringA("Pipeline Profile: \n");
 		rs2::pipeline_profile activeProfile = m_pPipeline->get_active_profile();
 
@@ -31,26 +30,25 @@ HRESULT RealSenseCam::Init()
 		OutputDebugStringA(activeProfile.get_device().get_info(rs2_camera_info::RS2_CAMERA_INFO_NAME));
 		OutputDebugStringA("\n");
 
-		if (*m_pProfile)
+		// now log each of the streams
+		auto streamProfiles = activeProfile.get_streams();
+
+		for each (auto streamProfile in streamProfiles)
 		{
-			auto streamProfiles = activeProfile.get_streams();
-
-			for each (auto streamProfile in streamProfiles)
-			{
-				OutputDebugStringA("- Stream: ");
-				OutputDebugStringA(rs2_stream_to_string(streamProfile.stream_type()));
-				OutputDebugStringA(", ");
-				char buffer[4];
-				OutputDebugStringA(_itoa(streamProfile.fps(), buffer, 10));
-				OutputDebugStringA(" fps, ");
-				OutputDebugStringA(rs2_format_to_string(streamProfile.format()));
-				OutputDebugStringA("\n");
-			}
-
-			m_pAlignToDepth = new rs2::align(RS2_STREAM_DEPTH);
-
-			return S_OK;
+			OutputDebugStringA("- Stream: ");
+			OutputDebugStringA(rs2_stream_to_string(streamProfile.stream_type()));
+			OutputDebugStringA(", ");
+			char buffer[4];
+			OutputDebugStringA(_itoa(streamProfile.fps(), buffer, 10));
+			OutputDebugStringA(" fps, ");
+			OutputDebugStringA(rs2_format_to_string(streamProfile.format()));
+			OutputDebugStringA("\n");
 		}
+
+		// initialise the align-to-depth object (used to map RGB pixels to Depth pixels)
+		m_pAlignToDepth = new rs2::align(RS2_STREAM_DEPTH);
+
+		return S_OK;
 	}
 
 	return E_FAIL;
