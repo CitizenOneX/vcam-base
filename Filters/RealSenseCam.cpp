@@ -94,6 +94,47 @@ void RealSenseCam::UnInit()
 	}
 }
 
+/// <summary>
+/// assuming the 8bits per pixel is an IR intensity value
+/// then replicate it in the R, G and B bytes of the output frame buffer
+/// as we invert the image
+/// </summary>
+/// <param name="frameBuffer">output buffer, 24bpp</param>
+/// <param name="frameSize">output buffer size in bytes</param>
+/// <param name="frame">input video frame</param>
+void RealSenseCam::invert8bppToRGB(BYTE* frameBuffer, int frameSize, rs2::video_frame frame)
+{
+	int pixelCount = frame.get_height() * frame.get_width();
+	auto data = (BYTE*)frame.get_data();
+	for (int i = 0; i < pixelCount; ++i)
+	{
+		BYTE val = data[(pixelCount - i) - 1];
+		frameBuffer[3 * i] = val;
+		frameBuffer[3 * i + 1] = val;
+		frameBuffer[3 * i + 2] = val;
+	}
+}
+
+/// <summary>
+/// assuming the 24bits per pixel is an RGB value
+/// then replicate it in the R, G and B bytes of the output frame buffer
+/// as we invert the image. Don't flip the bytes around to BGR though.
+/// </summary>
+/// <param name="frameBuffer">output buffer, 24bpp</param>
+/// <param name="frameSize">output buffer size in bytes</param>
+/// <param name="frame">input video frame</param>
+void RealSenseCam::invert24bppToRGB(BYTE* frameBuffer, int frameSize, rs2::video_frame frame)
+{
+	int pixelCount = frame.get_height() * frame.get_width();
+	auto data = (BYTE*)frame.get_data();
+	for (int i = 0; i < pixelCount; ++i)
+	{
+		frameBuffer[3 * i] = data[3 * (pixelCount - i) - 1];
+		frameBuffer[3 * i + 1] = data[3 * (pixelCount - i) - 2];
+		frameBuffer[3 * i + 2] = data[3 * (pixelCount - i) - 3];
+	}
+}
+
 void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 {
 	if (m_pPipeline != NULL)
@@ -108,29 +149,19 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 				// IR is 1 byte per pixel so we need to copy to R, G and B
 				// might as well invert while we're there
 				auto ir = frames.get_infrared_frame();
-				int pixelCount = ir.get_height() * ir.get_width();
-				auto data = (BYTE*)ir.get_data();
-				for (int i = 0; i < pixelCount; ++i)
-				{
-					BYTE irVal = data[(pixelCount - i) - 1];
-					frameBuffer[3 * i] = irVal;
-					frameBuffer[3 * i + 1] = irVal;
-					frameBuffer[3 * i + 2] = irVal;
-				}
+				invert8bppToRGB(frameBuffer, frameSize, ir);
 			}
 			break;
 		case Color:
 			{
 				auto color = frames.get_color_frame();
-				memcpy(frameBuffer, color.get_data(), min(frameSize, color.get_data_size()));
+				invert24bppToRGB(frameBuffer, frameSize, color);
 			}
 			break;
 		case ColorizedDepth:
 			{
-				auto depth = frames.get_depth_frame();
-				auto color = frames.get_color_frame();
-				auto colorized_depth = m_pColorizer->colorize(depth);
-				memcpy(frameBuffer, colorized_depth.get_data(), min(frameSize, colorized_depth.get_data_size()));
+				auto colorized_depth = m_pColorizer->colorize(frames.get_depth_frame());
+				invert24bppToRGB(frameBuffer, frameSize, colorized_depth);
 			}
 			break;
 		case ColorAlignedDepth:
@@ -140,7 +171,7 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 				// in 100% CPU utilisation when handling color frames by the looks
 				frames = m_pAlignToDepth->process(frames);
 				auto color = frames.get_color_frame();
-				memcpy(frameBuffer, color.get_data(), min(frameSize, color.get_data_size()));
+				invert24bppToRGB(frameBuffer, frameSize, color);
 			}
 			break;
 		case PointCloud:
