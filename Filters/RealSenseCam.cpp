@@ -1,4 +1,5 @@
 #include "RealSenseCam.h"
+#include "Projection.hpp"
 
 HRESULT RealSenseCam::Init(RealSenseCamType type)
 {
@@ -94,6 +95,82 @@ void RealSenseCam::UnInit()
 	}
 }
 
+void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
+{
+	if (m_pPipeline != NULL)
+	{
+		// Block program until frames arrive if we need to, but take the most recent and discard older frames
+		rs2::frameset frames = m_pPipeline->wait_for_frames();
+
+		switch (m_Type)
+		{
+		case RealSenseCamType::IR:
+		{
+			// IR is 1 byte per pixel so we need to copy to R, G and B
+			// might as well invert while we're there
+			auto ir = frames.get_infrared_frame();
+			invert8bppToRGB(frameBuffer, frameSize, ir);
+		}
+		break;
+		case RealSenseCamType::Color:
+		{
+			auto color = frames.get_color_frame();
+			invert24bppToRGB(frameBuffer, frameSize, color);
+		}
+		break;
+		case RealSenseCamType::ColorizedDepth:
+		{
+			auto colorized_depth = m_pColorizer->colorize(frames.get_depth_frame());
+			invert24bppToRGB(frameBuffer, frameSize, colorized_depth);
+		}
+		break;
+		case RealSenseCamType::ColorAlignedDepth:
+		{
+			// align the color frame to the depth frame (so we end up with the smaller depth frame with color mapped onto it)
+			// TODO color frames will only be reenabled after I rebuild realsense with OpenMP set to FALSE, since it results
+			// in 100% CPU utilisation when handling color frames by the looks
+			frames = m_pAlignToDepth->process(frames);
+			auto color = frames.get_color_frame();
+			invert24bppToRGB(frameBuffer, frameSize, color);
+		}
+		break;
+		case RealSenseCamType::PointCloud:
+		{
+			auto depth = frames.get_depth_frame();
+			m_pPoints = &m_pPointCloud->calculate(depth);
+			// TODO copy to framebuffer
+		}
+		break;
+		case RealSenseCamType::PointCloudIR:
+		{
+			auto depth = frames.get_depth_frame();
+			auto ir = frames.get_infrared_frame();
+			m_pPointCloud->map_to(ir);
+			m_pPoints = &m_pPointCloud->calculate(depth);
+			// TODO copy to framebuffer
+		}
+		break;
+		case RealSenseCamType::PointCloudColor:
+		{
+			auto depth = frames.get_depth_frame();
+			auto color = frames.get_color_frame();
+			m_pPointCloud->map_to(color);
+			m_pPoints = &m_pPointCloud->calculate(depth);
+			// TODO copy to framebuffer
+		}
+		break;
+		default:
+			break;
+		}
+
+		// TODO - plenty:
+		// fetch RGB and Depth frames as point cloud
+		// project colorized point cloud to the 2D frame
+		// refer to rs-gl sample for OpenGL-accelerated implementation; just copy the rendered texture back to CPU memory rather than use a gl window
+		// https://github.com/IntelRealSense/librealsense/tree/master/examples/gl
+	}
+}
+
 /// <summary>
 /// assuming the 8bits per pixel is an IR intensity value
 /// then replicate it in the R, G and B bytes of the output frame buffer
@@ -102,7 +179,7 @@ void RealSenseCam::UnInit()
 /// <param name="frameBuffer">output buffer, 24bpp</param>
 /// <param name="frameSize">output buffer size in bytes</param>
 /// <param name="frame">input video frame</param>
-void RealSenseCam::invert8bppToRGB(BYTE* frameBuffer, int frameSize, rs2::video_frame frame)
+void RealSenseCam::invert8bppToRGB(BYTE * frameBuffer, int frameSize, rs2::video_frame frame)
 {
 	int pixelCount = frame.get_height() * frame.get_width();
 	auto data = (BYTE*)frame.get_data();
@@ -123,7 +200,7 @@ void RealSenseCam::invert8bppToRGB(BYTE* frameBuffer, int frameSize, rs2::video_
 /// <param name="frameBuffer">output buffer, 24bpp</param>
 /// <param name="frameSize">output buffer size in bytes</param>
 /// <param name="frame">input video frame</param>
-void RealSenseCam::invert24bppToRGB(BYTE* frameBuffer, int frameSize, rs2::video_frame frame)
+void RealSenseCam::invert24bppToRGB(BYTE * frameBuffer, int frameSize, rs2::video_frame frame)
 {
 	int pixelCount = frame.get_height() * frame.get_width();
 	auto data = (BYTE*)frame.get_data();
@@ -132,81 +209,5 @@ void RealSenseCam::invert24bppToRGB(BYTE* frameBuffer, int frameSize, rs2::video
 		frameBuffer[3 * i] = data[3 * (pixelCount - i) - 1];
 		frameBuffer[3 * i + 1] = data[3 * (pixelCount - i) - 2];
 		frameBuffer[3 * i + 2] = data[3 * (pixelCount - i) - 3];
-	}
-}
-
-void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
-{
-	if (m_pPipeline != NULL)
-	{
-		// Block program until frames arrive if we need to, but take the most recent and discard older frames
-		rs2::frameset frames = m_pPipeline->wait_for_frames();
-
-		switch (m_Type)
-		{
-		case RealSenseCamType::IR:
-			{
-				// IR is 1 byte per pixel so we need to copy to R, G and B
-				// might as well invert while we're there
-				auto ir = frames.get_infrared_frame();
-				invert8bppToRGB(frameBuffer, frameSize, ir);
-			}
-			break;
-		case RealSenseCamType::Color:
-			{
-				auto color = frames.get_color_frame();
-				invert24bppToRGB(frameBuffer, frameSize, color);
-			}
-			break;
-		case RealSenseCamType::ColorizedDepth:
-			{
-				auto colorized_depth = m_pColorizer->colorize(frames.get_depth_frame());
-				invert24bppToRGB(frameBuffer, frameSize, colorized_depth);
-			}
-			break;
-		case RealSenseCamType::ColorAlignedDepth:
-			{
-				// align the color frame to the depth frame (so we end up with the smaller depth frame with color mapped onto it)
-				// TODO color frames will only be reenabled after I rebuild realsense with OpenMP set to FALSE, since it results
-				// in 100% CPU utilisation when handling color frames by the looks
-				frames = m_pAlignToDepth->process(frames);
-				auto color = frames.get_color_frame();
-				invert24bppToRGB(frameBuffer, frameSize, color);
-			}
-			break;
-		case RealSenseCamType::PointCloud:
-			{
-				auto depth = frames.get_depth_frame();
-				m_pPoints = &m_pPointCloud->calculate(depth);
-				// TODO copy to framebuffer
-			}
-			break;
-		case RealSenseCamType::PointCloudIR:
-			{
-				auto depth = frames.get_depth_frame();
-				auto ir = frames.get_infrared_frame();
-				m_pPointCloud->map_to(ir);
-				m_pPoints = &m_pPointCloud->calculate(depth);
-				// TODO copy to framebuffer
-			}
-			break;
-		case RealSenseCamType::PointCloudColor:
-			{
-				auto depth = frames.get_depth_frame();
-				auto color = frames.get_color_frame();
-				m_pPointCloud->map_to(color);
-				m_pPoints = &m_pPointCloud->calculate(depth);
-				// TODO copy to framebuffer
-			}
-			break;
-		default:
-			break;
-		}
-
-		// TODO - plenty:
-		// fetch RGB and Depth frames as point cloud
-		// project colorized point cloud to the 2D frame
-		// refer to rs-gl sample for OpenGL-accelerated implementation; just copy the rendered texture back to CPU memory rather than use a gl window
-		// https://github.com/IntelRealSense/librealsense/tree/master/examples/gl
 	}
 }
