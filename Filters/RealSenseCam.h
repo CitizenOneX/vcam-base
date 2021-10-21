@@ -16,6 +16,9 @@ enum class RealSenseCamType
 	PointCloudColor
 };
 
+// forward declaration here so we can keep a pointer in this class
+struct glfw_state;
+
 class RealSenseCam
 {
 public:
@@ -30,6 +33,8 @@ private:
 	rs2::pointcloud *m_pPointCloud;	// RS2 pointcloud helper
 	rs2::points* m_pPoints;			// persist the points between frames in case we want to display again
 	rs2::colorizer* m_pColorizer;	// Helper to colorize depth images - not needed when RGB colors are used
+	glfw_state* m_pViewState;			// An object to manage view state for 3d point cloud projections
+
 
 	// helper functions for mapping RS frames to output directshow frames (includes inverting etc.)
 	void invert8bppToRGB(BYTE* frameBuffer, int frameSize, rs2::video_frame frame);

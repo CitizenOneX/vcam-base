@@ -1,6 +1,7 @@
 #include "RealSenseCam.h"
 #include "Projection.hpp"
 
+
 HRESULT RealSenseCam::Init(RealSenseCamType type)
 {
 	m_Type = type;
@@ -36,18 +37,21 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
 		m_pPointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
 		m_pPoints = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
+		m_pViewState = new glfw_state();
 		break;
 	case RealSenseCamType::PointCloudIR:
 		pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
 		pCfg->enable_stream(RS2_STREAM_INFRARED, 320, 240, RS2_FORMAT_Y8, 30);  // TODO won't need this with RGB
 		m_pPointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
 		m_pPoints = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
+		m_pViewState = new glfw_state();
 		break;
 	case RealSenseCamType::PointCloudColor:
 		pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
 		pCfg->enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
 		m_pPointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
 		m_pPoints = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
+		m_pViewState = new glfw_state();
 		break;
 	default:
 		break;

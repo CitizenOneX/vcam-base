@@ -1,6 +1,5 @@
 // License: Apache 2.0. See LICENSE file in root directory.
 // Copyright(c) 2015 Intel Corporation. All Rights Reserved.
-
 #pragma once
 
 #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
@@ -1034,39 +1033,39 @@ void draw_pointcloud_wrt_world(float width, float height, glfw_state& app_state,
 }
 
 // Registers the state variable and callbacks to allow mouse control of the pointcloud
-//void register_glfw_callbacks(window& app, glfw_state& app_state)
-//{
-//    app.on_left_mouse = [&](bool pressed)
-//    {
-//        app_state.ml = pressed;
-//    };
-//
-//    app.on_mouse_scroll = [&](double xoffset, double yoffset)
-//    {
-//        app_state.offset_x -= static_cast<float>(xoffset);
-//        app_state.offset_y -= static_cast<float>(yoffset);
-//    };
-//
-//    app.on_mouse_move = [&](double x, double y)
-//    {
-//        if (app_state.ml)
-//        {
-//            app_state.yaw -= (x - app_state.last_x);
-//            app_state.yaw = std::max(app_state.yaw, -120.0);
-//            app_state.yaw = std::min(app_state.yaw, +120.0);
-//            app_state.pitch += (y - app_state.last_y);
-//            app_state.pitch = std::max(app_state.pitch, -80.0);
-//            app_state.pitch = std::min(app_state.pitch, +80.0);
-//        }
-//        app_state.last_x = x;
-//        app_state.last_y = y;
-//    };
-//
-//    app.on_key_release = [&](int key)
-//    {
-//        if (key == 32) // Escape
-//        {
-//            app_state.yaw = app_state.pitch = 0; app_state.offset_x = app_state.offset_y = 0.0;
-//        }
-//    };
-//}
+void register_glfw_callbacks(window& app, glfw_state& app_state)
+{
+    app.on_left_mouse = [&](bool pressed)
+    {
+        app_state.ml = pressed;
+    };
+
+    app.on_mouse_scroll = [&](double xoffset, double yoffset)
+    {
+        app_state.offset_x -= static_cast<float>(xoffset);
+        app_state.offset_y -= static_cast<float>(yoffset);
+    };
+
+    app.on_mouse_move = [&](double x, double y)
+    {
+        if (app_state.ml)
+        {
+            app_state.yaw -= (x - app_state.last_x);
+            app_state.yaw = max(app_state.yaw, -120.0);
+            app_state.yaw = min(app_state.yaw, +120.0);
+            app_state.pitch += (y - app_state.last_y);
+            app_state.pitch = max(app_state.pitch, -80.0);
+            app_state.pitch = min(app_state.pitch, +80.0);
+        }
+        app_state.last_x = x;
+        app_state.last_y = y;
+    };
+
+    app.on_key_release = [&](int key)
+    {
+        if (key == 32) // Escape
+        {
+            app_state.yaw = app_state.pitch = 0; app_state.offset_x = app_state.offset_y = 0.0;
+        }
+    };
+}
