@@ -920,14 +920,19 @@ void draw_pointcloud(float width, float height, glfw_state& app_state, rs2::poin
 
     /* this segment actually prints the pointcloud */
     auto vertices = points.get_vertices();              // get vertices
-    auto tex_coords = points.get_texture_coordinates(); // and texture coordinates
-    for (int i = 0; i < points.size(); i++)
+
+    // TODO working through a bug in which points has size>0 but get_vertices() returns NULL
+    if (vertices)
     {
-        if (vertices[i].z)
+        auto tex_coords = points.get_texture_coordinates(); // and texture coordinates
+        for (int i = 0; i < points.size(); i++)
         {
-            // upload the point and texture coordinates only for points we have depth data for
-            glVertex3fv(vertices[i]);
-            glTexCoord2fv(tex_coords[i]);
+            if (vertices[i].z)
+            {
+                // upload the point and texture coordinates only for points we have depth data for
+                glVertex3fv(vertices[i]);
+                glTexCoord2fv(tex_coords[i]);
+            }
         }
     }
 
@@ -1068,4 +1073,65 @@ void register_glfw_callbacks(window& app, glfw_state& app_state)
             app_state.yaw = app_state.pitch = 0; app_state.offset_x = app_state.offset_y = 0.0;
         }
     };
+}
+
+// Handles all the OpenGL calls needed to render the point cloud to the supplied 24-bit RGB framebuffer
+// If the supplied video frame is null, render points just in white on black background
+void render_pointcloud_to_buffer(BYTE* frameBuffer, int frameSize, float width, float height, glfw_state* viewState, rs2::points* points, rs2::video_frame videoFrame)
+{
+    // TODO check if !points evaluates to true when the entire frame has a depth of 0 or something.
+    // if not, !points should be true only when points is null, which would be a bug
+    if (!points)
+        return;
+
+    // OpenGL commands that prep screen for the pointcloud
+    glLoadIdentity();
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+
+    glClearColor(153.f / 255, 153.f / 255, 153.f / 255, 1);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    gluPerspective(60, width / height, 0.01f, 10.0f);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    gluLookAt(0, 0, 0, 0, 0, 1, 0, -1, 0);
+
+    glTranslatef(0, 0, +0.5f + viewState->offset_y * 0.05f);
+    glRotated(viewState->pitch, 1, 0, 0);
+    glRotated(viewState->yaw, 0, 1, 0);
+    glTranslatef(0, 0, -0.5f);
+
+    glPointSize(width / 640);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, viewState->tex.get_gl_handle());
+    float tex_border_color[] = { 0.8f, 0.8f, 0.8f, 0.8f };
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, tex_border_color);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, 0x812F); // GL_CLAMP_TO_EDGE
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, 0x812F); // GL_CLAMP_TO_EDGE
+    glBegin(GL_POINTS);
+
+
+    /* this segment actually prints the pointcloud */
+    auto vertices = points->get_vertices();              // get vertices
+    auto tex_coords = points->get_texture_coordinates(); // and texture coordinates
+    for (int i = 0; i < points->size(); i++)
+    {
+        if (vertices[i].z)
+        {
+            // upload the point and texture coordinates only for points we have depth data for
+            glVertex3fv(vertices[i]);
+            glTexCoord2fv(tex_coords[i]);
+        }
+    }
+
+    // OpenGL cleanup
+    glEnd();
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glPopAttrib();
 }
