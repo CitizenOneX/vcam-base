@@ -1,12 +1,14 @@
 TODO
 ====
-- get the output format of the RS stream(s) enabled - wxhxfps, pixel format
-- work out how to set the output sample format of the filter, to at least include IR, Color, Colorized Depth, and ultimately rendered 3D; easily detect/switch between
-- efficiently send IR feed, colorized depth feed to native-sized output sample (detect 320x240x30? on USB2.1, and detect higher on USB3?)
-- efficiently flip camera feed
+- either render to glfw window to show point cloud is working, or go straight to rendering to offscreen render target and copy back to Filter output
+- Detect higher resolutions on USB3 and change output size accordingly
 - configure RS profiles - depth cutoffs etc on startup (does this require a processing block, or just sensor config?)
-- work out why enabling RS color stream (on its own or with depth too) results in 100% CPU but depth/IR are fine on their own
 
 
 DONE
 ====
+- get the output format of the RS stream(s) enabled - wxhxfps, pixel format
+- work out how to set the output sample format of the filter, to at least include IR, Color, Colorized Depth, and ultimately rendered 3D; easily detect/switch between
+- efficiently send IR feed, colorized depth feed to native-sized output sample (detect 320x240x30? on USB2.1, and detect higher on USB3?)
+- efficiently flip camera feed - no super-efficient reverse memcpy, so just iterating in reverse
+- work out why enabling RS color stream (on its own or with depth too) results in 100% CPU but depth/IR are fine on their own - OpenMP option in librealsense has this known issue. Rebuilt without multiprocessor support
