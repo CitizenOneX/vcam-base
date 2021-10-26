@@ -1,7 +1,20 @@
 #include "RealSenseCam.h"
 #include "Projection.hpp"
 #include <cassert>
+//#include "Projection.hpp"
 
+RealSenseCam::RealSenseCam() : m_AlignToDepth(RS2_STREAM_DEPTH), m_Type(RealSenseCamType::PointCloudColor), mOutputWidth(640), mOutputHeight(480)
+{
+	// TODO these are only currently needed for Pointcloud types, not video/depth/IR/colorized depth
+	m_pApp = new window(1280, 720, "RealSense Pointcloud Example");
+	m_pViewState = new glfw_state();
+}
+
+RealSenseCam::~RealSenseCam()
+{
+	if (m_pApp) delete m_pApp;
+	if (m_pViewState) delete m_pViewState;
+}
 
 HRESULT RealSenseCam::Init(RealSenseCamType type)
 {
@@ -16,61 +29,60 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 	// Set up the persistent objects used by the RealSenseCam
 	//m_pPipeline = new rs2::pipeline();
 	// set up the config object for the desired device/streams pipeline
-	rs2::config* pCfg = new rs2::config();
+	rs2::config Cfg;
 	//pCfg->disable_all_streams(); // TODO this should be safe enough since I'm enabling the ones I need after
 
 	switch (m_Type)
 	{
 	case RealSenseCamType::IR:
-		pCfg->enable_stream(RS2_STREAM_INFRARED, 320, 240, RS2_FORMAT_Y8, 30);  // TODO won't need this with RGB
+		Cfg.enable_stream(RS2_STREAM_INFRARED, 320, 240, RS2_FORMAT_Y8, 30);  // TODO won't need this with RGB
 		mOutputWidth = 320;
 		mOutputHeight = 240;
 		break;
 	case RealSenseCamType::Color:
-		pCfg->enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
+		Cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
 		mOutputWidth = 320;
 		mOutputHeight = 240;
 		break;
 	case RealSenseCamType::ColorizedDepth:
-		pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
-		m_pColorizer = new rs2::colorizer(); // TODO we won't need this in the end when we use actual RGB values aligned to depth
+		Cfg.enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
 		mOutputWidth = 320;
 		mOutputHeight = 240;
 		break;
 	case RealSenseCamType::ColorAlignedDepth:
-		pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
-		pCfg->enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  // remember color streams cause the CPU to go mental if OpenMP is enabled in RS2 build
-		m_pAlignToDepth = new rs2::align(RS2_STREAM_DEPTH);
+		Cfg.enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
+		Cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  // remember color streams cause the CPU to go mental if OpenMP is enabled in RS2 build
+		//m_AlignToDepth.  (RS2_STREAM_DEPTH); // FIXME if we initialise in the header, how do we specify
 		mOutputWidth = 320;
 		mOutputHeight = 240;
 		break;
 	case RealSenseCamType::PointCloud:
-		pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
+		Cfg.enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
 		// Create a simple OpenGL window for rendering:
-		m_pApp = new window(1280, 720, "RealSense Pointcloud Example");
-		m_pPointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
-		m_pPoints = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
-		m_pViewState = new glfw_state();
+		//m_App = new window(1280, 720, "RealSense Pointcloud Example");
+		//m_PointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
+		//m_Points = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
+		//m_ViewState = new glfw_state();
 		mOutputWidth = 640;
 		mOutputHeight = 480;
 		break;
 	case RealSenseCamType::PointCloudIR:
-		pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
-		pCfg->enable_stream(RS2_STREAM_INFRARED, 320, 240, RS2_FORMAT_Y8, 30);  // TODO won't need this with RGB
-		m_pApp = new window(1280, 720, "RealSense Pointcloud Example");
-		m_pPointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
-		m_pPoints = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
-		m_pViewState = new glfw_state();
+		Cfg.enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
+		Cfg.enable_stream(RS2_STREAM_INFRARED, 320, 240, RS2_FORMAT_Y8, 30);  // TODO won't need this with RGB
+		//m_App = new window(1280, 720, "RealSense Pointcloud Example");
+		//m_PointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
+		//m_Points = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
+		//m_ViewState = new glfw_state();
 		mOutputWidth = 640;
 		mOutputHeight = 480;
 		break;
 	case RealSenseCamType::PointCloudColor:
-		pCfg->enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
-		pCfg->enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
-		m_pApp = new window(1280, 720, "RealSense Pointcloud Example");
-		m_pPointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
-		m_pPoints = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
-		m_pViewState = new glfw_state();
+		Cfg.enable_stream(RS2_STREAM_DEPTH, 320, 240, RS2_FORMAT_Z16, 30);
+		Cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
+		//m_App = new window(1280, 720, "RealSense Pointcloud Example");
+		//m_pPointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
+		//m_pPoints = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
+		//m_pViewState = new glfw_state();
 		// register callbacks to allow manipulation of the pointcloud
 		register_glfw_callbacks(*m_pApp, *m_pViewState);
 		mOutputWidth = 640;
@@ -82,9 +94,9 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 
 	// now try to resolve the config and start!
 	//if (pCfg->can_resolve(((std::shared_ptr<rs2_pipeline>) * m_pPipeline)))
-	if (pCfg->can_resolve(((std::shared_ptr<rs2_pipeline>)m_Pipe)))
+	if (Cfg.can_resolve(((std::shared_ptr<rs2_pipeline>)m_Pipe)))
 		{
-		m_Pipe.start(*pCfg);
+		m_Pipe.start(Cfg);
 
 		// Debug logging to work out which devices/streams we got in our profile
 		OutputDebugStringA("Pipeline Profile: \n");
@@ -151,7 +163,7 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 		break;
 		case RealSenseCamType::ColorizedDepth:
 		{
-			auto colorized_depth = m_pColorizer->colorize(frames.get_depth_frame());
+			auto colorized_depth = m_Colorizer.colorize(frames.get_depth_frame());
 			invert24bppToRGB(frameBuffer, frameSize, colorized_depth);
 		}
 		break;
@@ -160,7 +172,7 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 			// align the color frame to the depth frame (so we end up with the smaller depth frame with color mapped onto it)
 			// TODO color frames will only be reenabled after I rebuild realsense with OpenMP set to FALSE, since it results
 			// in 100% CPU utilisation when handling color frames by the looks
-			frames = m_pAlignToDepth->process(frames);
+			frames = m_AlignToDepth.process(frames);
 			auto color = frames.get_color_frame();
 			invert24bppToRGB(frameBuffer, frameSize, color);
 		}
@@ -168,7 +180,7 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 		case RealSenseCamType::PointCloud:
 		{
 			auto depth = frames.get_depth_frame();
-			m_pPoints = &m_pPointCloud->calculate(depth);
+			m_Points = m_PointCloud.calculate(depth);
 			//render_pointcloud_to_buffer(frameBuffer, frameSize, mOutputWidth, mOutputHeight, m_pViewState, m_pPoints, NULL);
 			// TODO copy to framebuffer
 		}
@@ -177,19 +189,19 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 		{
 			auto depth = frames.get_depth_frame();
 			auto ir = frames.get_infrared_frame();
-			m_pPointCloud->map_to(ir);
-			m_pPoints = &m_pPointCloud->calculate(depth);
+			m_PointCloud.map_to(ir);
+			m_Points = m_PointCloud.calculate(depth);
 			// TODO copy to framebuffer
 		}
 		break;
 		case RealSenseCamType::PointCloudColor:
 		{
 			auto color = frames.get_color_frame();
-			m_pPointCloud->map_to(color);
+			m_PointCloud.map_to(color);
 			auto depth = frames.get_depth_frame();
-			m_pPoints = &m_pPointCloud->calculate(depth);
+			m_Points = m_PointCloud.calculate(depth);
 			rs2_error* e = nullptr;
-			int pointsCount = rs2_get_frame_points_count((rs2_frame*)m_pPoints, &e);
+			int pointsCount = rs2_get_frame_points_count((rs2_frame*)m_Points, &e);
 			if (e != NULL)
 			{
 				OutputDebugStringA("Error calculating points: \n");
@@ -201,7 +213,7 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 			m_pViewState->tex.upload(color);
 
 			// Draw the pointcloud
-			draw_pointcloud(m_pApp->width(), m_pApp->height(), *m_pViewState, *m_pPoints);
+			draw_pointcloud(m_pApp->width(), m_pApp->height(), *m_pViewState, m_Points);
 
 		}
 		break;

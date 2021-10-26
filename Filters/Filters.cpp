@@ -5,7 +5,6 @@
 
 #include "filters.h"
 #include "RealSenseCam.h"
-#include <librealsense2/rs.hpp>
 
 //////////////////////////////////////////////////////////////////////////
 //  CVCam is the source filter which masquerades as a capture device

@@ -932,6 +932,12 @@ void draw_pointcloud(float width, float height, glfw_state& app_state, rs2::poin
                 // upload the point and texture coordinates only for points we have depth data for
                 glVertex3fv(vertices[i]);
                 glTexCoord2fv(tex_coords[i]);
+
+                if (vertices[i].z < 1.0f)
+                {
+                    // less than a meter! TODO use this as a breakpoint
+                    bool lessThanAMeter = true;
+                }
             }
         }
     }
@@ -1115,7 +1121,7 @@ void render_pointcloud_to_buffer(BYTE* frameBuffer, int frameSize, float width, 
     glBegin(GL_POINTS);
 
 
-    /* this segment actually prints the pointcloud */
+    // this segment actually prints the pointcloud
     auto vertices = points->get_vertices();              // get vertices
     auto tex_coords = points->get_texture_coordinates(); // and texture coordinates
     for (int i = 0; i < points->size(); i++)
