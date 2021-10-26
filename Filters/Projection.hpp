@@ -1082,8 +1082,7 @@ void register_glfw_callbacks(window& app, glfw_state& app_state)
 }
 
 // Handles all the OpenGL calls needed to render the point cloud to the supplied 24-bit RGB framebuffer
-// If the supplied video frame is null, render points just in white on black background
-void render_pointcloud_to_buffer(BYTE* frameBuffer, int frameSize, float width, float height, glfw_state* viewState, rs2::points* points, rs2::video_frame videoFrame)
+void render_pointcloud_to_buffer(BYTE* frameBuffer, int frameSize, float frameWidth, float frameHeight, float width, float height, glfw_state& viewState, rs2::points& points)
 {
     // TODO check if !points evaluates to true when the entire frame has a depth of 0 or something.
     // if not, !points should be true only when points is null, which would be a bug
@@ -1105,15 +1104,15 @@ void render_pointcloud_to_buffer(BYTE* frameBuffer, int frameSize, float width, 
     glPushMatrix();
     gluLookAt(0, 0, 0, 0, 0, 1, 0, -1, 0);
 
-    glTranslatef(0, 0, +0.5f + viewState->offset_y * 0.05f);
-    glRotated(viewState->pitch, 1, 0, 0);
-    glRotated(viewState->yaw, 0, 1, 0);
+    glTranslatef(0, 0, +0.5f + viewState.offset_y * 0.05f);
+    glRotated(viewState.pitch, 1, 0, 0);
+    glRotated(viewState.yaw, 0, 1, 0);
     glTranslatef(0, 0, -0.5f);
 
     glPointSize(width / 640);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, viewState->tex.get_gl_handle());
+    glBindTexture(GL_TEXTURE_2D, viewState.tex.get_gl_handle());
     float tex_border_color[] = { 0.8f, 0.8f, 0.8f, 0.8f };
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, tex_border_color);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, 0x812F); // GL_CLAMP_TO_EDGE
@@ -1122,9 +1121,9 @@ void render_pointcloud_to_buffer(BYTE* frameBuffer, int frameSize, float width, 
 
 
     // this segment actually prints the pointcloud
-    auto vertices = points->get_vertices();              // get vertices
-    auto tex_coords = points->get_texture_coordinates(); // and texture coordinates
-    for (int i = 0; i < points->size(); i++)
+    auto vertices = points.get_vertices();              // get vertices
+    auto tex_coords = points.get_texture_coordinates(); // and texture coordinates
+    for (int i = 0; i < points.size(); i++)
     {
         if (vertices[i].z)
         {
@@ -1140,4 +1139,9 @@ void render_pointcloud_to_buffer(BYTE* frameBuffer, int frameSize, float width, 
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glPopAttrib();
+
+    // TODO just test putting something back into the buffer
+    float centerDepth = vertices[points.size() / 2 + 160].z;
+    // clamp the depth between 0 and 1m, then lerp that out over 0-255 for intensity
+    memset(frameBuffer, (int)(max(min(centerDepth*255, 255), 0)), frameSize);
 }

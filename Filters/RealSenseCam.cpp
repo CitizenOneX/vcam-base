@@ -213,8 +213,8 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 			m_pViewState->tex.upload(color);
 
 			// Draw the pointcloud
-			draw_pointcloud(m_pApp->width(), m_pApp->height(), *m_pViewState, m_Points);
-
+			//draw_pointcloud(m_pApp->width(), m_pApp->height(), *m_pViewState, m_Points);
+			render_pointcloud_to_buffer(frameBuffer, frameSize, (float)mOutputWidth, (float)mOutputHeight, m_pApp->width(), m_pApp->height(), *m_pViewState, m_Points);
 		}
 		break;
 		default:
