@@ -146,7 +146,7 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
 
         // create vertex buffer to store the vertex data
         D3D11_BUFFER_DESC vertex_buff_descr = {};
-        vertex_buff_descr.ByteWidth = sizeof(vertex_data_array);
+        vertex_buff_descr.ByteWidth = arrayElementCount * sizeof(float);
         vertex_buff_descr.Usage = D3D11_USAGE_DYNAMIC;
         vertex_buff_descr.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         vertex_buff_descr.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -222,18 +222,20 @@ void PointCloudRenderer::UnInit()
 
 void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFrameLength, const float* pointsXyz, const unsigned int pointsCount)
 {
+    assert(outputFrameBuffer != NULL && pointsXyz != NULL && (pointsCount == m_InputWidth * m_InputHeight) && (outputFrameLength == m_OutputWidth * m_OutputHeight * 3));
+
     // copy/set/map the updated vertex data into the vertex buffer
     {
         D3D11_MAPPED_SUBRESOURCE mappedResource;
         ZeroMemory(&mappedResource, sizeof(D3D11_MAPPED_SUBRESOURCE));
 
         //  Disable GPU access to the vertex buffer data.
-        //HRESULT hr = device_context_ptr->Map(vertex_buffer_ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-        //assert(SUCCEEDED(hr));
+        HRESULT hr = device_context_ptr->Map(vertex_buffer_ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+        assert(SUCCEEDED(hr));
         //  Update the vertex buffer here.
-        //memcpy(mappedResource.pData, pointsXyz, pointsCount * sizeof(float));
+        memcpy(mappedResource.pData, pointsXyz, (unsigned long long)pointsCount * 3 * sizeof(float));
         //  Reenable GPU access to the vertex buffer data.
-        //device_context_ptr->Unmap(vertex_buffer_ptr, 0);
+        device_context_ptr->Unmap(vertex_buffer_ptr, 0);
     }
 
     // Direct3D rendering goes here:
