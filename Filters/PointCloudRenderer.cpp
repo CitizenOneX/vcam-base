@@ -219,11 +219,41 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
         device_context_ptr->VSSetConstantBuffers(0, 1, &constant_buffer_ptr);
     }
 
+    // set background color for point clouds
+#if defined( DEBUG ) || defined( _DEBUG )
+    // set the default background color to cornflower blue for Debug builds
+    m_BackgroundColor = new float[] { 0x64 / 255.0f, 0x95 / 255.0f, 0xED / 255.0f, 1.0f };
+#else
+    // set the default background color to black for Release builds
+    m_BackgroundColor = new float[] { 0.0f, 0.0f, 0.0f, 1.0f };
+#endif // DEBUG
+
+    // set the viewport and other rendering settings that never change(!)
+    {
+        D3D11_VIEWPORT viewport = { 0.0f, 0.0f, static_cast<float>(m_OutputWidth), static_cast<float>(m_OutputHeight), 0.0f, 1.0f };
+        device_context_ptr->RSSetViewports(1, &viewport);
+
+        // set the output merger
+        device_context_ptr->OMSetRenderTargets(1, &render_target_view_ptr, NULL);
+
+        // set the input assembler
+        UINT vertex_stride = 3 * sizeof(float);
+        UINT vertex_offset = 0;
+        device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
+        device_context_ptr->IASetInputLayout(input_layout_ptr);
+        device_context_ptr->IASetVertexBuffers(0, 1, &vertex_buffer_ptr, &vertex_stride, &vertex_offset);
+
+        // set the shaders
+        device_context_ptr->VSSetShader(vertex_shader_ptr, NULL, 0);
+        device_context_ptr->PSSetShader(pixel_shader_ptr, NULL, 0);
+    }
+
     return S_OK;;
 }
 
 void PointCloudRenderer::UnInit()
 {
+    if (m_BackgroundColor) delete m_BackgroundColor;
     if (render_target_view_ptr) render_target_view_ptr->Release();
     if (vertex_shader_ptr) vertex_shader_ptr->Release();
     if (pixel_shader_ptr) pixel_shader_ptr->Release();
@@ -252,42 +282,8 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
         device_context_ptr->Unmap(vertex_buffer_ptr, 0);
     }
 
-    // Direct3D rendering goes here:
-#if defined( DEBUG ) || defined( _DEBUG )
-    // clear the back buffer to cornflower blue for the new frame
-    float background_colour[4] = { 0x64 / 255.0f, 0x95 / 255.0f, 0xED / 255.0f, 1.0f };
-#else
-    // clear the back buffer to black for the new frame
-    float background_colour[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-#endif // DEBUG
-
-    device_context_ptr->ClearRenderTargetView(render_target_view_ptr, background_colour);
-
-    // TODO move to Init()
-    D3D11_VIEWPORT viewport = {
-      0.0f,
-      0.0f,
-      static_cast<float>(m_OutputWidth),
-      static_cast<float>(m_OutputHeight),
-      0.0f,
-      1.0f };
-
-    // TODO can this just be done once in Init or is it the sort of thing that we need to check context each frame and re-set?
-    device_context_ptr->RSSetViewports(1, &viewport);
-
-    // set the output merger
-    device_context_ptr->OMSetRenderTargets(1, &render_target_view_ptr, NULL);
-
-    // set the input assembler
-    UINT vertex_stride = 3 * sizeof(float);
-    UINT vertex_offset = 0;
-    device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
-    device_context_ptr->IASetInputLayout(input_layout_ptr);
-    device_context_ptr->IASetVertexBuffers(0, 1, &vertex_buffer_ptr, &vertex_stride, &vertex_offset);
-
-    // set the shaders
-    device_context_ptr->VSSetShader(vertex_shader_ptr, NULL, 0);
-    device_context_ptr->PSSetShader(pixel_shader_ptr, NULL, 0);
+    // clear to the background color
+    device_context_ptr->ClearRenderTargetView(render_target_view_ptr, m_BackgroundColor);
 
     // draw the points
     UINT vertex_count = m_InputWidth * m_InputHeight;
@@ -296,7 +292,7 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
     // flush the DirectX to the render target
     device_context_ptr->Flush();
 
-    // Copy render target texture to the staging texture
+    // Duplicate render target texture to the staging texture so we can get at it from the CPU
     device_context_ptr->CopyResource(staging_ptr, target_ptr);
     
     // Map/memcpy/Unmap the staging data to main memory
