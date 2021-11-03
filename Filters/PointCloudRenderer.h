@@ -33,6 +33,8 @@ private:
 	// D3D globals
 	ID3D11Device* device_ptr = NULL;
 	ID3D11DeviceContext* device_context_ptr = NULL;
+	ID3D11Texture2D* target_ptr = NULL;
+	ID3D11Texture2D* staging_ptr = NULL;
 	ID3D11RenderTargetView* render_target_view_ptr = NULL;
 	ID3D11VertexShader* vertex_shader_ptr = NULL;
 	ID3D11PixelShader* pixel_shader_ptr = NULL;

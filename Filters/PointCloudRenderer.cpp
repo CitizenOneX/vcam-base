@@ -40,19 +40,33 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
         assert(S_OK == hr && device_ptr && device_context_ptr);
 
         // Create the render target texture (which will be copied back to caller's output frame)
-        ID3D11Texture2D* target;
-        D3D11_TEXTURE2D_DESC desc = {};
-        desc.Width = outputWidth;
-        desc.Height = outputHeight;
-        desc.ArraySize = 1;
-        desc.SampleDesc.Count = 1;
-        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // .... DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-        desc.BindFlags = D3D11_BIND_RENDER_TARGET;
-        hr = device_ptr->CreateTexture2D(&desc, nullptr, &target);
+        D3D11_TEXTURE2D_DESC desc_target = {};
+        desc_target.Width = outputWidth;
+        desc_target.Height = outputHeight;
+        desc_target.ArraySize = 1;
+        desc_target.SampleDesc.Count = 1;
+        desc_target.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // .... DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+        desc_target.BindFlags = D3D11_BIND_RENDER_TARGET;
+        desc_target.Usage = D3D11_USAGE_DEFAULT;
+        hr = device_ptr->CreateTexture2D(&desc_target, nullptr, &target_ptr);
+        assert(SUCCEEDED(hr));
+
+        // Create the Staging texture, we resource-copy GPU->GPU from target to staging, then read from staging
+        // at our leisure
+        D3D11_TEXTURE2D_DESC desc_staging = {};
+        desc_staging.Width = outputWidth;
+        desc_staging.Height = outputHeight;
+        desc_staging.ArraySize = 1;
+        desc_staging.SampleDesc.Count = 1;
+        desc_staging.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // .... DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+        desc_staging.BindFlags = 0;
+        desc_staging.Usage = D3D11_USAGE_STAGING;
+        desc_staging.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+        hr = device_ptr->CreateTexture2D(&desc_staging, nullptr, &staging_ptr);
         assert(SUCCEEDED(hr));
 
         // create and set the render target view
-        hr = device_ptr->CreateRenderTargetView(target, nullptr, &render_target_view_ptr);
+        hr = device_ptr->CreateRenderTargetView(target_ptr, nullptr, &render_target_view_ptr);
         assert(SUCCEEDED(hr));
         device_context_ptr->OMSetRenderTargets(1, &render_target_view_ptr, nullptr);
     }
@@ -216,6 +230,8 @@ void PointCloudRenderer::UnInit()
     if (pixel_shader_ptr) pixel_shader_ptr->Release();
     if (input_layout_ptr) input_layout_ptr->Release();
     if (vertex_buffer_ptr) vertex_buffer_ptr->Release();
+    if (staging_ptr) staging_ptr->Release();
+    if (target_ptr) target_ptr->Release();
     if (device_context_ptr) device_context_ptr->Release();
     if (device_ptr) device_ptr->Release();
 }
@@ -227,7 +243,6 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
     // copy/set/map the updated vertex data into the vertex buffer
     {
         D3D11_MAPPED_SUBRESOURCE mappedResource;
-        ZeroMemory(&mappedResource, sizeof(D3D11_MAPPED_SUBRESOURCE));
 
         //  Disable GPU access to the vertex buffer data.
         HRESULT hr = device_context_ptr->Map(vertex_buffer_ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -277,7 +292,15 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
     // flush the DirectX to the render target
     device_context_ptr->Flush();
 
-    // TODO copy render target data back...}
-    // get a copy of the rendered output texture
-    // memcpy back over to the outputFrameBuffer
+    // Copy render target texture to the staging texture
+    device_context_ptr->CopyResource(staging_ptr, target_ptr);
+    
+    // Map/memcpy/Unmap the staging data to main memory
+    {
+        D3D11_MAPPED_SUBRESOURCE mappedResource;
+        HRESULT hr = device_context_ptr->Map(staging_ptr, 0, D3D11_MAP_READ, 0, &mappedResource);
+        assert(SUCCEEDED(hr));
+        memcpy(outputFrameBuffer, mappedResource.pData, outputFrameLength);
+        device_context_ptr->Unmap(staging_ptr, 0);
+    }
 }
