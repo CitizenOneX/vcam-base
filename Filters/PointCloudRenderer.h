@@ -27,7 +27,7 @@ public:
 	// TODO vertex structures with colour? Separate streams? 
 	// TODO really can pass current depth and color frames and let the shader work out the points, not librealsense
 	// TODO pass near/far clipping, other thresholding?
-	void RenderFrame(BYTE* outputFrameBuffer, const int outputFrameLength, const float* pointsXyz, const int pointsCount);
+	void RenderFrame(BYTE* outputFrameBuffer, const int outputFrameLength, const float* pointsXyz, const unsigned int pointsCount);
 
 private:
 	// D3D globals

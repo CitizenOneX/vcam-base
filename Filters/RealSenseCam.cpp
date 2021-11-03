@@ -141,10 +141,11 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 
 void RealSenseCam::UnInit()
 {
-	//if (m_Pipe != NULL)
-	//{
-		m_Pipe.stop();
-	//}
+	// uninit the point cloud renderer
+	m_Renderer.UnInit();
+
+	// stop the realsense pipeline
+	m_Pipe.stop();
 }
 
 void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)

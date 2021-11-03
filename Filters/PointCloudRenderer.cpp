@@ -10,8 +10,6 @@ PointCloudRenderer::PointCloudRenderer() : m_InputWidth(0), m_InputHeight(0), m_
 
 PointCloudRenderer::~PointCloudRenderer()
 {
-    // FIXME if (m_*) { m_*->Release(); } etc.
-    // (or in UnInit()?)
 }
 
 HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidth, int outputHeight)
@@ -151,6 +149,7 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
         vertex_buff_descr.ByteWidth = sizeof(vertex_data_array);
         vertex_buff_descr.Usage = D3D11_USAGE_DYNAMIC;
         vertex_buff_descr.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+        vertex_buff_descr.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         D3D11_SUBRESOURCE_DATA sr_data = { 0 };
         sr_data.pSysMem = vertex_data_array;
         HRESULT hr = device_ptr->CreateBuffer(&vertex_buff_descr, &sr_data, &vertex_buffer_ptr);
@@ -212,17 +211,30 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
 
 void PointCloudRenderer::UnInit()
 {
-    // TODO directX Release() on all the objects? Or in destructor?
+    if (render_target_view_ptr) render_target_view_ptr->Release();
+    if (vertex_shader_ptr) vertex_shader_ptr->Release();
+    if (pixel_shader_ptr) pixel_shader_ptr->Release();
+    if (input_layout_ptr) input_layout_ptr->Release();
+    if (vertex_buffer_ptr) vertex_buffer_ptr->Release();
+    if (device_context_ptr) device_context_ptr->Release();
+    if (device_ptr) device_ptr->Release();
 }
 
-void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFrameLength, const float* pointsXyz, const int pointsCount)
+void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFrameLength, const float* pointsXyz, const unsigned int pointsCount)
 {
-    UINT vertex_stride = 3 * sizeof(float);
-    UINT vertex_offset = 0;
-    UINT vertex_count = m_InputWidth * m_InputHeight;
-
     // copy/set/map the updated vertex data into the vertex buffer
+    {
+        D3D11_MAPPED_SUBRESOURCE mappedResource;
+        ZeroMemory(&mappedResource, sizeof(D3D11_MAPPED_SUBRESOURCE));
 
+        //  Disable GPU access to the vertex buffer data.
+        //HRESULT hr = device_context_ptr->Map(vertex_buffer_ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+        //assert(SUCCEEDED(hr));
+        //  Update the vertex buffer here.
+        //memcpy(mappedResource.pData, pointsXyz, pointsCount * sizeof(float));
+        //  Reenable GPU access to the vertex buffer data.
+        //device_context_ptr->Unmap(vertex_buffer_ptr, 0);
+    }
 
     // Direct3D rendering goes here:
     // clear the back buffer to cornflower blue for the new frame
@@ -246,6 +258,8 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
     device_context_ptr->OMSetRenderTargets(1, &render_target_view_ptr, NULL);
 
     // set the input assembler
+    UINT vertex_stride = 3 * sizeof(float);
+    UINT vertex_offset = 0;
     device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
     device_context_ptr->IASetInputLayout(input_layout_ptr);
     device_context_ptr->IASetVertexBuffers(0, 1, &vertex_buffer_ptr, &vertex_stride, &vertex_offset);
@@ -255,6 +269,7 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
     device_context_ptr->PSSetShader(pixel_shader_ptr, NULL, 0);
 
     // draw the points
+    UINT vertex_count = m_InputWidth * m_InputHeight;
     device_context_ptr->Draw(vertex_count, 0);
 
     // flush the DirectX to the render target
