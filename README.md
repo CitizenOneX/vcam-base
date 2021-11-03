@@ -1,6 +1,6 @@
 # DirectShow VCam - Intel Realsense camera 3D pointcloud projection
 
-- RealSenseCam:
+- RealSenseCam: displays Color, ColorizedDepth, ColorAlignedDepth, IR, (projected) PointCloud streams from a RealSense camera as a DirectShow filter that can be used as an input into various programs (e.g. Zoom) as a capture device stream
   - Note: The HEAD of the main branch contains all the RealSense and Direct3D11 dependencies
   - Note: Tag "vcam-base" contains the following changes from the originally-forked repo with no added dependencies:
 (I thought I'd save my tweaks to get VCam building first as a base repo before I add further dependencies. By requiring the repos to be peer directories, we can avoid having to set some build properties by using relative paths, basically. Plus for some reason the baseclasses project was producing strmbase.lib outputs rather than BaseClasses.lib outputs - so rather than fork that repo too, I'll just roll with it and update the input libraries to expect strmbase/strmbasd in this project for linking to. Maybe I didn't follow the instructions properly...)
