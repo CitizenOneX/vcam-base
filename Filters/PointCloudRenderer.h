@@ -45,5 +45,7 @@ private:
 	UINT m_InputHeight;
 	UINT m_OutputWidth;
 	UINT m_OutputHeight;
+
+	void convert32bppToRGB(BYTE* frameBuffer, int frameSize, BYTE* pData, int pixelCount);
 };
 

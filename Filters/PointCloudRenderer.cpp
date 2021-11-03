@@ -183,7 +183,7 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
 
         // Set up WVP matrix, camera details
         DirectX::XMMATRIX world = DirectX::XMMatrixIdentity();
-        static DirectX::XMVECTOR eyePos = DirectX::XMVectorSet(2.0f, 3.0f, -2.0f, 0.0f);
+        static DirectX::XMVECTOR eyePos = DirectX::XMVectorSet(0.5f, 0.5f, 1.0f, 0.0f);
         static DirectX::XMVECTOR lookAtPos = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f); //Look at center of the world
         static DirectX::XMVECTOR upVector = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); //Positive Y Axis = Up
         DirectX::XMMATRIX viewMatrix = DirectX::XMMatrixLookAtLH(eyePos, lookAtPos, upVector);
@@ -300,7 +300,27 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
         D3D11_MAPPED_SUBRESOURCE mappedResource;
         HRESULT hr = device_context_ptr->Map(staging_ptr, 0, D3D11_MAP_READ, 0, &mappedResource);
         assert(SUCCEEDED(hr));
-        memcpy(outputFrameBuffer, mappedResource.pData, outputFrameLength);
+        // pData is 32bit, outputFrameBuffer is 24bit, and one of them is BGR I think? Certainly stored upside-down anyway
+        //memcpy(outputFrameBuffer, mappedResource.pData, outputFrameLength);
+        convert32bppToRGB(outputFrameBuffer, outputFrameLength, (BYTE*)mappedResource.pData, m_OutputWidth * m_OutputHeight);
         device_context_ptr->Unmap(staging_ptr, 0);
+    }
+}
+
+/// <summary>
+/// assuming the 24bits per pixel is an RGB value
+/// then replicate it in the R, G and B bytes of the output frame buffer
+/// as we invert the image. Don't flip the bytes around to BGR though.
+/// </summary>
+/// <param name="frameBuffer">output buffer, 24bpp</param>
+/// <param name="frameSize">output buffer size in bytes</param>
+/// <param name="frame">input video frame</param>
+void PointCloudRenderer::convert32bppToRGB(BYTE* frameBuffer, int frameSize, BYTE* pData, int pixelCount)
+{
+    for (int i = 0; i < pixelCount; ++i)
+    {
+        frameBuffer[3 * i] = pData[4 * i + 2];
+        frameBuffer[3 * i + 1] = pData[4 * i + 1];
+        frameBuffer[3 * i + 2] = pData[4 * i + 0];
     }
 }
