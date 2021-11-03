@@ -10,6 +10,8 @@ PointCloudRenderer::PointCloudRenderer() : m_InputWidth(0), m_InputHeight(0), m_
 
 PointCloudRenderer::~PointCloudRenderer()
 {
+    // FIXME if (m_*) { m_*->Release(); } etc.
+    // (or in UnInit()?)
 }
 
 HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidth, int outputHeight)
@@ -19,41 +21,43 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
     m_OutputWidth = outputWidth;
     m_OutputHeight = outputHeight;
 
-    // Direct3D setup
-    // Set up Device and Device Context
-    D3D_FEATURE_LEVEL feature_level;
-    UINT flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
+    // Set up Direct3D Device and Device Context
+    {
+        D3D_FEATURE_LEVEL feature_level;
+        UINT flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
 #if defined( DEBUG ) || defined( _DEBUG )
-    flags |= D3D11_CREATE_DEVICE_DEBUG;
+        flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
-    HRESULT hr = D3D11CreateDevice(
-        NULL,
-        D3D_DRIVER_TYPE_HARDWARE,
-        NULL,
-        flags,
-        NULL,
-        0,
-        D3D11_SDK_VERSION,
-        &device_ptr,
-        &feature_level,
-        &device_context_ptr);
-    assert(S_OK == hr && device_ptr && device_context_ptr);
+        HRESULT hr = D3D11CreateDevice(
+            NULL,
+            D3D_DRIVER_TYPE_HARDWARE,
+            NULL,
+            flags,
+            NULL,
+            0,
+            D3D11_SDK_VERSION,
+            &device_ptr,
+            &feature_level,
+            &device_context_ptr);
+        assert(S_OK == hr && device_ptr && device_context_ptr);
 
-    // Create the render target texture (which will be copied back to caller's output frame)
-    ID3D11Texture2D* target;
-    D3D11_TEXTURE2D_DESC desc = {};
-    desc.Width = outputWidth;
-    desc.Height = outputHeight;
-    desc.ArraySize = 1;
-    desc.SampleDesc.Count = 1;
-    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // .... DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-    desc.BindFlags = D3D11_BIND_RENDER_TARGET;
-    hr = device_ptr->CreateTexture2D(&desc, nullptr, &target);
-    assert(SUCCEEDED(hr));
+        // Create the render target texture (which will be copied back to caller's output frame)
+        ID3D11Texture2D* target;
+        D3D11_TEXTURE2D_DESC desc = {};
+        desc.Width = outputWidth;
+        desc.Height = outputHeight;
+        desc.ArraySize = 1;
+        desc.SampleDesc.Count = 1;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // .... DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+        desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+        hr = device_ptr->CreateTexture2D(&desc, nullptr, &target);
+        assert(SUCCEEDED(hr));
 
-    // create and set the render target view
-    device_ptr->CreateRenderTargetView(target, nullptr, &render_target_view_ptr);
-    device_context_ptr->OMSetRenderTargets(1, &render_target_view_ptr, nullptr);
+        // create and set the render target view
+        hr = device_ptr->CreateRenderTargetView(target, nullptr, &render_target_view_ptr);
+        assert(SUCCEEDED(hr));
+        device_context_ptr->OMSetRenderTargets(1, &render_target_view_ptr, nullptr);
+    }
 
     // Compile the Shaders
     {
@@ -136,28 +140,25 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
     }
 
 
-    // vertices, vertex buffer
-    int arrayElementCount = m_InputWidth * m_InputHeight * 3;
-    float* vertex_data_array = new float[arrayElementCount];
-    ZeroMemory(vertex_data_array, arrayElementCount * sizeof(float));
+    // Create dynamic vertex buffer - sized to input width x height
+    {
+        int arrayElementCount = m_InputWidth * m_InputHeight * 3;
+        float* vertex_data_array = new float[arrayElementCount];
+        ZeroMemory(vertex_data_array, arrayElementCount * sizeof(float));
 
-    vertex_buffer_ptr = NULL;
-    {   
         // create vertex buffer to store the vertex data
         D3D11_BUFFER_DESC vertex_buff_descr = {};
         vertex_buff_descr.ByteWidth = sizeof(vertex_data_array);
-        vertex_buff_descr.Usage = D3D11_USAGE_DEFAULT;
+        vertex_buff_descr.Usage = D3D11_USAGE_DYNAMIC;
         vertex_buff_descr.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         D3D11_SUBRESOURCE_DATA sr_data = { 0 };
         sr_data.pSysMem = vertex_data_array;
-        HRESULT hr = device_ptr->CreateBuffer(
-            &vertex_buff_descr,
-            &sr_data,
-            &vertex_buffer_ptr);
+        HRESULT hr = device_ptr->CreateBuffer(&vertex_buff_descr, &sr_data, &vertex_buffer_ptr);
         assert(SUCCEEDED(hr));
     }
 
-    // constant buffer for world view projection matrix (TODO just hardcode it, actually? Or will I use it for an effect?)
+    // constant buffer for world view projection matrix 
+    // TODO just hardcode it, actually? Or will I use it for an effect?
     {
         ID3D11Buffer* constant_buffer_ptr = NULL;
         struct VS_CONSTANT_BUFFER
@@ -196,7 +197,7 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
         sr_data.SysMemSlicePitch = 0;
 
         // Create the buffer
-        hr = device_ptr->CreateBuffer(
+        HRESULT hr = device_ptr->CreateBuffer(
             &constant_buff_descr,
             &sr_data,
             &constant_buffer_ptr);
@@ -211,7 +212,7 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
 
 void PointCloudRenderer::UnInit()
 {
-    // TODO directX release() on all the objects?
+    // TODO directX Release() on all the objects? Or in destructor?
 }
 
 void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFrameLength, const float* pointsXyz, const int pointsCount)
@@ -227,8 +228,7 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
     // clear the back buffer to cornflower blue for the new frame
     float background_colour[4] = {
       0x64 / 255.0f, 0x95 / 255.0f, 0xED / 255.0f, 1.0f };
-    device_context_ptr->ClearRenderTargetView(
-        render_target_view_ptr, background_colour);
+    device_context_ptr->ClearRenderTargetView(render_target_view_ptr, background_colour);
 
     // TODO move to Init()
     D3D11_VIEWPORT viewport = {
