@@ -92,7 +92,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(DirectShowSamplesDir)\baseclasses;$(RealSenseSdkDir)\include;$(RealSenseSdkDir)\third-party\glfw\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(DirectShowSamplesDir)\baseclasses;$(RealSenseSdkDir)\include;$(RealSenseSdkDir)\third-party\glfw\include;$(RealSenseSdkDir)\third-party\glad</AdditionalIncludeDirectories>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
     </ClCompile>
     <Midl>
@@ -117,13 +117,14 @@
       <ModuleDefinitionFile>$(ProjectName).def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(DirectShowSamplesDir)\bin\$(Platform)\$(Configuration);$(RealSenseSdkDir)\build\$(Configuration);$(RealSenseSdkDir)\build\third-party\glfw\src\$(Configuration);$(RealSenseSdkDir)\build\src\gl\$(Configuration)</AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies);strmbase.lib;realsense2.lib;glfw3.lib;opengl32.lib;glu32.lib;realsense2-gl.lib</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(DirectShowSamplesDir)\baseclasses;$(RealSenseSdkDir)\include;$(RealSenseSdkDir)\third-party\glfw\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(DirectShowSamplesDir)\baseclasses;$(RealSenseSdkDir)\include;$(RealSenseSdkDir)\third-party\glfw\include;$(RealSenseSdkDir)\third-party\glad</AdditionalIncludeDirectories>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
     </ClCompile>
     <Midl>
@@ -147,13 +148,14 @@
       <ModuleDefinitionFile>$(ProjectName).def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(DirectShowSamplesDir)\bin\$(Platform)\$(Configuration);$(RealSenseSdkDir)\build\$(Configuration);$(RealSenseSdkDir)\build\third-party\glfw\src\$(Configuration);$(RealSenseSdkDir)\build\src\gl\$(Configuration)</AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies);strmbase.lib;realsense2.lib;glfw3.lib;opengl32.lib;glu32.lib;realsense2-gl.lib</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(DirectShowSamplesDir)\baseclasses;$(RealSenseSdkDir)\include;$(RealSenseSdkDir)\third-party\glfw\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(DirectShowSamplesDir)\baseclasses;$(RealSenseSdkDir)\include;$(RealSenseSdkDir)\third-party\glfw\include;$(RealSenseSdkDir)\third-party\glad</AdditionalIncludeDirectories>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
     </ClCompile>
     <Midl>
@@ -178,13 +180,14 @@
       <ModuleDefinitionFile>$(ProjectName).def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(DirectShowSamplesDir)\bin\$(Platform)\$(Configuration);$(RealSenseSdkDir)\build\$(Configuration);$(RealSenseSdkDir)\build\third-party\glfw\src\$(Configuration);$(RealSenseSdkDir)\build\src\gl\$(Configuration)</AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies);strmbasd.lib;realsense2d.lib;glfw3d.lib;opengl32.lib;glu32.lib;realsense2-gld.lib</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(DirectShowSamplesDir)\baseclasses;$(RealSenseSdkDir)\include;$(RealSenseSdkDir)\third-party\glfw\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(DirectShowSamplesDir)\baseclasses;$(RealSenseSdkDir)\include;$(RealSenseSdkDir)\third-party\glfw\include;$(RealSenseSdkDir)\third-party\glad</AdditionalIncludeDirectories>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
     </ClCompile>
     <Midl>
@@ -208,11 +211,13 @@
       <ModuleDefinitionFile>$(ProjectName).def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(DirectShowSamplesDir)\bin\$(Platform)\$(Configuration);$(RealSenseSdkDir)\build\$(Configuration);$(RealSenseSdkDir)\build\third-party\glfw\src\$(Configuration);$(RealSenseSdkDir)\build\src\gl\$(Configuration)</AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies);strmbasd.lib;realsense2d.lib;glfw3d.lib;opengl32.lib;glu32.lib;realsense2-gld.lib</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Dll.cpp" />
     <ClCompile Include="Filters.cpp" />
+    <ClCompile Include="PointCloudRenderer.cpp" />
     <ClCompile Include="RealSenseCam.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -220,8 +225,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Filters.h" />
-    <ClInclude Include="Projection.hpp" />
+    <ClInclude Include="PointCloudRenderer.h" />
     <ClInclude Include="RealSenseCam.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="pointcloud.hlsl">
+      <DeploymentContent>true</DeploymentContent>
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

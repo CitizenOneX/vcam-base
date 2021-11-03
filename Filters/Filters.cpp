@@ -60,13 +60,13 @@ CVCamStream::CVCamStream(HRESULT *phr, CVCam *pParent, LPCWSTR pPinName) :
     case RealSenseCamType::IR:
     case RealSenseCamType::ColorizedDepth:
     case RealSenseCamType::ColorAlignedDepth:
-        GetMediaType(4, &m_mt); // 320x240x3 size
+        GetMediaType(4, &m_mt); // 320x240x3 output size
         break;
     case RealSenseCamType::Color:
     case RealSenseCamType::PointCloud:
     case RealSenseCamType::PointCloudIR:
     case RealSenseCamType::PointCloudColor:
-        GetMediaType(8, &m_mt); // 640x480x3 size
+        GetMediaType(8, &m_mt); // 640x480x3 output size
         break;
     default:
         break;
