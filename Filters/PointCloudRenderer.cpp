@@ -254,9 +254,14 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
     }
 
     // Direct3D rendering goes here:
+#if defined( DEBUG ) || defined( _DEBUG )
     // clear the back buffer to cornflower blue for the new frame
-    float background_colour[4] = {
-      0x64 / 255.0f, 0x95 / 255.0f, 0xED / 255.0f, 1.0f };
+    float background_colour[4] = { 0x64 / 255.0f, 0x95 / 255.0f, 0xED / 255.0f, 1.0f };
+#else
+    // clear the back buffer to black for the new frame
+    float background_colour[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+#endif // DEBUG
+
     device_context_ptr->ClearRenderTargetView(render_target_view_ptr, background_colour);
 
     // TODO move to Init()
