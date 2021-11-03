@@ -1,7 +1,9 @@
 # DirectShow VCam - Intel Realsense camera 3D pointcloud projection
 
-I'm making a DirectShow VCam but the first little bit of work I needed to do was get this basic VCam building - so I thought I'd save my tweaks first as a base repo before I add further dependencies. By requiring the repos to be peer directories, we can avoid having to set some build properties by using relative paths, basically. Plus for some reason the baseclasses project was producing strmbase.lib outputs rather than BaseClasses.lib outputs - so rather than fork that repo too, I'll just roll with it and update the input libraries to expect strmbase/strmbasd in this project for linking to. (Maybe I didn't follow the instructions properly...)
-Note: Tag "vcam-base" contains these changes with no added dependencies. After that point, RealSense2 code (and README) changes have been introduced.
+DirectShow VCam:
+Note: The HEAD of the main branch contains all the RealSense and Direct3D11 dependencies
+Note: Tag "vcam-base" contains the following changes from the originally-forked repo with no added dependencies:
+(I thought I'd save my tweaks to get VCam building first as a base repo before I add further dependencies. By requiring the repos to be peer directories, we can avoid having to set some build properties by using relative paths, basically. Plus for some reason the baseclasses project was producing strmbase.lib outputs rather than BaseClasses.lib outputs - so rather than fork that repo too, I'll just roll with it and update the input libraries to expect strmbase/strmbasd in this project for linking to. Maybe I didn't follow the instructions properly...)
 
 - Setup
   - Create a parent directory, e.g. VCam, then cd into it
@@ -20,11 +22,11 @@ Note: Tag "vcam-base" contains these changes with no added dependencies. After t
   - Insert Filter / Video Capture Sources / Virtual Cam
   - Insert Filter / Direct Show Filters / Enhanced Video Renderer
   - Connect Output pin of Virtual Cam node to Input pin of Enhanced Video Renderer Node (Color Space Converter Node automatically appears)
-  - Press Play, see the inverted colorized depth stream (for now). Currently copies buffers inefficiently, seems to be polling for frames way more often than 30fps etc. Much work to do.
+  - Press Play, see the stream from the default RealSenseCamType set in Filters.h:22-ish. (Currently a point cloud.)
 
 ## /End "Why This Fork?"
 
-Original work by [Vivek](https://groups.google.com/g/microsoft.public.win32.programmer.directx.video/c/1beZkSCb0KE/m/5VF366wR3CcJ); community evidently owes much to [The March Hare](https://web.archive.org/web/20060813155608/http://tmhare.mvps.org/) and [roman380](https://github.com/roman380/tmhare.mvps.org-vcam). I also took a look at [KinectCam](https://github.com/dsouzae/KinectCam)
+Original work by [Vivek](https://groups.google.com/g/microsoft.public.win32.programmer.directx.video/c/1beZkSCb0KE/m/5VF366wR3CcJ); community evidently owes much to [The March Hare](https://web.archive.org/web/20060813155608/http://tmhare.mvps.org/) and [roman380](https://github.com/roman380/tmhare.mvps.org-vcam). I also took a look at [KinectCam](https://github.com/dsouzae/KinectCam) Lots of help from the many Direct3D11 tutorials to get the point cloud rendering started. The render-to-texture-and-copy-back code ended up being closest to something like [carasuca's offscreen D3D](https://github.com/carasuca/MinimalOffscreenD3D)
 
 See also:
 
@@ -33,7 +35,7 @@ See also:
 
 ## Updates
 
-Orignial source code is tagged by [original](https://github.com/roman380/tmhare.mvps.org-vcam/releases/tag/original) tag. In this state the project needs a bit of massaging to be beuilt.
+Orignial source code is tagged by [original](https://github.com/roman380/tmhare.mvps.org-vcam/releases/tag/original) tag. In this state the project needs a bit of massaging to be built.
 
 The head of the repository is updated for Virtual Studio 2019 Community builds.
 
@@ -46,6 +48,7 @@ Differences from original version:
 - output file name is Filters.dll (unlike original VCam.ax)
 - the project is extended to have `x64` platform configuration
 - Requires Intel [realsense2](https://github.com/IntelRealSense/librealsense) for interface with Realsense devices
+- Requires DirectX11/Direct3D11 in the Windows 10 SDK.
 
 ## How to use
 
