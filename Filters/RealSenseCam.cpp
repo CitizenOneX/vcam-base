@@ -24,11 +24,8 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 	rs2::log_to_file(rs2_log_severity::RS2_LOG_SEVERITY_ALL, "librealsense.log");
 	rs2::log(RS2_LOG_SEVERITY_DEBUG, "Starting Init()");
 
-	// Set up the persistent objects used by the RealSenseCam
-	//m_pPipeline = new rs2::pipeline();
-	// set up the config object for the desired device/streams pipeline
+	// set up the Realsense config object for the desired device/streams pipeline
 	rs2::config Cfg;
-	//pCfg->disable_all_streams(); // TODO this should be safe enough since I'm enabling the ones I need after
 
 	switch (m_Type)
 	{
@@ -44,7 +41,8 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		m_InputHeight = 480;
 		m_OutputWidth = 640;
 		m_OutputHeight = 480;
-		Cfg.enable_stream(RS2_STREAM_COLOR, m_InputWidth, m_InputHeight, RS2_FORMAT_ANY, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
+		// remember color streams go mental if OpenMP is enabled in RS2 build
+		Cfg.enable_stream(RS2_STREAM_COLOR, m_InputWidth, m_InputHeight, RS2_FORMAT_ANY, 30);
 		break;
 	case RealSenseCamType::ColorizedDepth:
 		m_InputWidth = 320;
@@ -59,8 +57,10 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		m_OutputWidth = 320;
 		m_OutputHeight = 240;
 		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputWidth, m_InputHeight, RS2_FORMAT_Z16, 30);
-		Cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  // remember color streams cause the CPU to go mental if OpenMP is enabled in RS2 build
-		// TODO two different input sizes... do I need a new field for inputDepth, inputColor? AlignTo will quickly bring it down to depth size...
+		// remember color streams cause the CPU to go mental if OpenMP is enabled in RS2 build
+		Cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  
+		// TODO two different input sizes... do I need a new field for inputDepth, inputColor? 
+		// AlignTo will quickly bring it down to depth size...
 		//m_AlignToDepth.  (RS2_STREAM_DEPTH); // FIXME if we initialise in the header, how do we specify
 		break;
 	case RealSenseCamType::PointCloud:
@@ -69,9 +69,6 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		m_OutputWidth = 640;
 		m_OutputHeight = 480;
 		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputWidth, m_InputHeight, RS2_FORMAT_Z16, 30);
-		// TODO no need for new() if these members are instantiated at object instantiation
-		//m_PointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
-		//m_Points = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
 		m_Renderer.Init(m_InputWidth, m_InputHeight, m_OutputWidth, m_OutputHeight);
 		break;
 	case RealSenseCamType::PointCloudIR:
@@ -81,9 +78,6 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		m_OutputHeight = 480;
 		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputWidth, m_InputHeight, RS2_FORMAT_Z16, 30);
 		Cfg.enable_stream(RS2_STREAM_INFRARED, m_InputWidth, m_InputHeight, RS2_FORMAT_Y8, 30);
-		// TODO no need for new() if these members are instantiated at object instantiation
-		//m_PointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
-		//m_Points = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
 		// No need for AlignTo - IR is automatically aligned with depth
 		m_Renderer.Init(m_InputWidth, m_InputHeight, m_OutputWidth, m_OutputHeight);
 		break;
@@ -94,9 +88,6 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		m_OutputHeight = 480;
 		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputWidth, m_InputHeight, RS2_FORMAT_Z16, 30);
 		Cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
-		// TODO no need for new() if these members are instantiated at object instantiation
-		//m_pPointCloud = new rs2::pointcloud(); // Declare pointcloud object, for calculating pointclouds and texture mappings
-		//m_pPoints = new rs2::points(); // We want the points object to be persistent so we can display the last cloud when a frame drops
 		// TODO AlignTo
 		m_Renderer.Init(m_InputWidth, m_InputHeight, m_OutputWidth, m_OutputHeight);
 		break;
@@ -105,7 +96,6 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 	}
 
 	// now try to resolve the config and start!
-	//if (pCfg->can_resolve(((std::shared_ptr<rs2_pipeline>) * m_pPipeline)))
 	if (Cfg.can_resolve(((std::shared_ptr<rs2_pipeline>)m_Pipe)))
 		{
 		m_Pipe.start(Cfg);
@@ -153,102 +143,99 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 	// just make sure that we've correctly set the output frame size
 	assert(frameSize == m_OutputWidth * m_OutputHeight * 3);
 
-	//if (m_pPipeline != NULL)
-	//{
-		// Block program until frames arrive if we need to, but take the most recent and discard older frames
-		rs2::frameset frames = m_Pipe.wait_for_frames();
+	// Block program until frames arrive if we need to, but take the most recent and discard older frames
+	rs2::frameset frames = m_Pipe.wait_for_frames();
 
-		switch (m_Type)
+	switch (m_Type)
+	{
+	case RealSenseCamType::IR:
+	{
+		// IR is 1 byte per pixel so we need to copy to R, G and B
+		// might as well invert while we're there
+		auto ir = frames.get_infrared_frame();
+		invert8bppToRGB(frameBuffer, frameSize, ir);
+	}
+	break;
+	case RealSenseCamType::Color:
+	{
+		auto color = frames.get_color_frame();
+		invert24bppToRGB(frameBuffer, frameSize, color);
+	}
+	break;
+	case RealSenseCamType::ColorizedDepth:
+	{
+		auto colorized_depth = m_Colorizer.colorize(frames.get_depth_frame());
+		invert24bppToRGB(frameBuffer, frameSize, colorized_depth);
+	}
+	break;
+	case RealSenseCamType::ColorAlignedDepth:
+	{
+		// align the color frame to the depth frame (so we end up with the smaller depth frame with color mapped onto it)
+		// TODO color frames will only be reenabled after I rebuild realsense with OpenMP set to FALSE, since it results
+		// in 100% CPU utilisation when handling color frames by the looks
+		frames = m_AlignToDepth.process(frames);
+		auto color = frames.get_color_frame();
+		invert24bppToRGB(frameBuffer, frameSize, color);
+	}
+	break;
+	case RealSenseCamType::PointCloud:
+	{
+		auto depth = frames.get_depth_frame();
+		m_Points = m_PointCloud.calculate(depth);
+		rs2_error* e = nullptr;
+		int pointsCount = rs2_get_frame_points_count((rs2_frame*)m_Points, &e);
+		if (e != NULL)
 		{
-		case RealSenseCamType::IR:
-		{
-			// IR is 1 byte per pixel so we need to copy to R, G and B
-			// might as well invert while we're there
-			auto ir = frames.get_infrared_frame();
-			invert8bppToRGB(frameBuffer, frameSize, ir);
+			OutputDebugStringA("Error calculating points: \n");
+			OutputDebugStringA(rs2_get_error_message(e));
 		}
-		break;
-		case RealSenseCamType::Color:
+		// Upload the vertices to Direct3D
+		// Draw the pointcloud and copy to the framebuffer
+		m_Renderer.RenderFrame(frameBuffer, frameSize, (const float*)m_Points.get_vertices(), pointsCount);
+	}
+	break;
+	case RealSenseCamType::PointCloudIR:
+	{
+		auto depth = frames.get_depth_frame();
+		auto ir = frames.get_infrared_frame();
+		m_PointCloud.map_to(ir);
+		m_Points = m_PointCloud.calculate(depth);
+		rs2_error* e = nullptr;
+		int pointsCount = rs2_get_frame_points_count((rs2_frame*)m_Points, &e);
+		if (e != NULL)
 		{
-			auto color = frames.get_color_frame();
-			invert24bppToRGB(frameBuffer, frameSize, color);
+			OutputDebugStringA("Error calculating points: \n");
+			OutputDebugStringA(rs2_get_error_message(e));
 		}
-		break;
-		case RealSenseCamType::ColorizedDepth:
+		// Upload the vertices to Direct3D
+		// TODO and the IR frame
+		// Draw the pointcloud and copy to the framebuffer
+		m_Renderer.RenderFrame(frameBuffer, frameSize, (const float*)m_Points.get_vertices(), pointsCount);
+	}
+	break;
+	case RealSenseCamType::PointCloudColor:
+	{
+		auto color = frames.get_color_frame();
+		m_PointCloud.map_to(color);
+		auto depth = frames.get_depth_frame();
+		m_Points = m_PointCloud.calculate(depth);
+		rs2_error* e = nullptr;
+		int pointsCount = rs2_get_frame_points_count((rs2_frame*)m_Points, &e);
+		if (e != NULL)
 		{
-			auto colorized_depth = m_Colorizer.colorize(frames.get_depth_frame());
-			invert24bppToRGB(frameBuffer, frameSize, colorized_depth);
+			OutputDebugStringA("Error calculating points: \n");
+			OutputDebugStringA(rs2_get_error_message(e));
 		}
-		break;
-		case RealSenseCamType::ColorAlignedDepth:
-		{
-			// align the color frame to the depth frame (so we end up with the smaller depth frame with color mapped onto it)
-			// TODO color frames will only be reenabled after I rebuild realsense with OpenMP set to FALSE, since it results
-			// in 100% CPU utilisation when handling color frames by the looks
-			frames = m_AlignToDepth.process(frames);
-			auto color = frames.get_color_frame();
-			invert24bppToRGB(frameBuffer, frameSize, color);
-		}
-		break;
-		case RealSenseCamType::PointCloud:
-		{
-			auto depth = frames.get_depth_frame();
-			m_Points = m_PointCloud.calculate(depth);
-			rs2_error* e = nullptr;
-			int pointsCount = rs2_get_frame_points_count((rs2_frame*)m_Points, &e);
-			if (e != NULL)
-			{
-				OutputDebugStringA("Error calculating points: \n");
-				OutputDebugStringA(rs2_get_error_message(e));
-			}
-			// Upload the vertices to Direct3D
-			// Draw the pointcloud and copy to the framebuffer
-			m_Renderer.RenderFrame(frameBuffer, frameSize, (const float*)m_Points.get_vertices(), pointsCount);
-		}
-		break;
-		case RealSenseCamType::PointCloudIR:
-		{
-			auto depth = frames.get_depth_frame();
-			auto ir = frames.get_infrared_frame();
-			m_PointCloud.map_to(ir);
-			m_Points = m_PointCloud.calculate(depth);
-			rs2_error* e = nullptr;
-			int pointsCount = rs2_get_frame_points_count((rs2_frame*)m_Points, &e);
-			if (e != NULL)
-			{
-				OutputDebugStringA("Error calculating points: \n");
-				OutputDebugStringA(rs2_get_error_message(e));
-			}
-			// Upload the vertices to Direct3D
-			// TODO and the IR frame
-			// Draw the pointcloud and copy to the framebuffer
-			m_Renderer.RenderFrame(frameBuffer, frameSize, (const float*)m_Points.get_vertices(), pointsCount);
-		}
-		break;
-		case RealSenseCamType::PointCloudColor:
-		{
-			auto color = frames.get_color_frame();
-			m_PointCloud.map_to(color);
-			auto depth = frames.get_depth_frame();
-			m_Points = m_PointCloud.calculate(depth);
-			rs2_error* e = nullptr;
-			int pointsCount = rs2_get_frame_points_count((rs2_frame*)m_Points, &e);
-			if (e != NULL)
-			{
-				OutputDebugStringA("Error calculating points: \n");
-				OutputDebugStringA(rs2_get_error_message(e));
-			}
 
-			// Upload the vertices to Direct3D
-			// TODO and the color frame
-			// Draw the pointcloud and copy to the framebuffer
-			m_Renderer.RenderFrame(frameBuffer, frameSize, (const float*)m_Points.get_vertices(), pointsCount);
-		}
+		// Upload the vertices to Direct3D
+		// TODO and the color frame
+		// Draw the pointcloud and copy to the framebuffer
+		m_Renderer.RenderFrame(frameBuffer, frameSize, (const float*)m_Points.get_vertices(), pointsCount);
+	}
+	break;
+	default:
 		break;
-		default:
-			break;
-		}
-	//}// pipeline != null
+	}
 }
 
 /// <summary>
