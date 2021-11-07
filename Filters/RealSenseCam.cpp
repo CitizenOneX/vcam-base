@@ -87,7 +87,7 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		m_OutputWidth = 640;
 		m_OutputHeight = 480;
 		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputWidth, m_InputHeight, RS2_FORMAT_Z16, 30);
-		Cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_RGB8, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
+		Cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_RGBA8, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
 		// TODO AlignTo
 		m_Renderer.Init(m_InputWidth, m_InputHeight, m_OutputWidth, m_OutputHeight);
 		break;
