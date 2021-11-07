@@ -188,7 +188,7 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
 
         // Set up WVP matrix, camera details
         DirectX::XMMATRIX world = DirectX::XMMatrixIdentity();
-        static DirectX::XMVECTOR eyePos = DirectX::XMVectorSet(0.5f, 0.5f, 1.0f, 0.0f);
+        static DirectX::XMVECTOR eyePos = DirectX::XMVectorSet(0.0f, 0.0f, -0.5f, 0.0f);
         static DirectX::XMVECTOR lookAtPos = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f); //Look at center of the world
         static DirectX::XMVECTOR upVector = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); //Positive Y Axis = Up
         DirectX::XMMATRIX viewMatrix = DirectX::XMMatrixLookAtLH(eyePos, lookAtPos, upVector);
