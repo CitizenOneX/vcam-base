@@ -7,7 +7,7 @@
 #pragma comment(lib, "d3dcompiler")     // shader compiler
 
 
-RealSenseCam::RealSenseCam() : m_AlignToDepth(RS2_STREAM_DEPTH), m_Type(RealSenseCamType::PointCloudColor), m_InputWidth(320), m_InputHeight(240), m_OutputWidth(640), m_OutputHeight(480)
+RealSenseCam::RealSenseCam() : m_AlignToDepth(RS2_STREAM_DEPTH), m_Type(RealSenseCamType::PointCloudColor), m_InputDepthWidth(320), m_InputDepthHeight(240), m_InputTexWidth(640), m_InputTexHeight(480), m_OutputWidth(640), m_OutputHeight(480)
 {
 }
 
@@ -30,66 +30,70 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 	switch (m_Type)
 	{
 	case RealSenseCamType::IR:
-		m_InputWidth = 320;
-		m_InputHeight = 240;
+		m_InputTexWidth = 320;
+		m_InputTexHeight = 240;
 		m_OutputWidth = 320;
 		m_OutputHeight = 240;
-		Cfg.enable_stream(RS2_STREAM_INFRARED, m_InputWidth, m_InputHeight, RS2_FORMAT_Y8, 30);
+		Cfg.enable_stream(RS2_STREAM_INFRARED, m_InputTexWidth, m_InputTexHeight, RS2_FORMAT_Y8, 30);
 		break;
 	case RealSenseCamType::Color:
-		m_InputWidth = 640;
-		m_InputHeight = 480;
+		m_InputTexWidth = 640;
+		m_InputTexHeight = 480;
 		m_OutputWidth = 640;
 		m_OutputHeight = 480;
 		// remember color streams go mental if OpenMP is enabled in RS2 build
-		Cfg.enable_stream(RS2_STREAM_COLOR, m_InputWidth, m_InputHeight, RS2_FORMAT_RGB8, 30);
+		Cfg.enable_stream(RS2_STREAM_COLOR, m_InputTexWidth, m_InputTexHeight, RS2_FORMAT_RGB8, 30);
 		break;
 	case RealSenseCamType::ColorizedDepth:
-		m_InputWidth = 320;
-		m_InputHeight = 240;
+		m_InputDepthWidth = 320;
+		m_InputDepthHeight = 240;
 		m_OutputWidth = 320;
 		m_OutputHeight = 240;
-		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputWidth, m_InputHeight, RS2_FORMAT_Z16, 30);
+		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputDepthWidth, m_InputDepthHeight, RS2_FORMAT_Z16, 30);
 		break;
 	case RealSenseCamType::ColorAlignedDepth:
-		m_InputWidth = 320;
-		m_InputHeight = 240;
+		m_InputDepthWidth = 320;
+		m_InputDepthHeight = 240;
+		m_InputTexWidth = 640;
+		m_InputTexHeight = 480;
 		m_OutputWidth = 320;
 		m_OutputHeight = 240;
-		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputWidth, m_InputHeight, RS2_FORMAT_Z16, 30);
+		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputDepthWidth, m_InputDepthHeight, RS2_FORMAT_Z16, 30);
 		// remember color streams cause the CPU to go mental if OpenMP is enabled in RS2 build
-		Cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  
-		// TODO two different input sizes... do I need a new field for inputDepth, inputColor? 
-		// AlignTo will quickly bring it down to depth size...
-		//m_AlignToDepth.  (RS2_STREAM_DEPTH); // FIXME if we initialise in the header, how do we specify
+		Cfg.enable_stream(RS2_STREAM_COLOR, m_InputTexWidth, m_InputTexHeight, RS2_FORMAT_ANY, 30);
 		break;
 	case RealSenseCamType::PointCloud:
-		m_InputWidth = 320;
-		m_InputHeight = 240;
+		m_InputDepthWidth = 320;
+		m_InputDepthHeight = 240;
+		m_InputTexWidth = 0;	// FIXME work out the right way to represent this - no texture stream
+		m_InputTexHeight = 0;
 		m_OutputWidth = 640;
 		m_OutputHeight = 480;
-		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputWidth, m_InputHeight, RS2_FORMAT_Z16, 30);
-		m_Renderer.Init(m_InputWidth, m_InputHeight, m_OutputWidth, m_OutputHeight);
+		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputDepthWidth, m_InputDepthHeight, RS2_FORMAT_Z16, 30);
+		m_Renderer.Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight);
 		break;
 	case RealSenseCamType::PointCloudIR:
-		m_InputWidth = 320;
-		m_InputHeight = 240;
+		m_InputDepthWidth = 320;
+		m_InputDepthHeight = 240;
+		m_InputTexWidth = 320;
+		m_InputTexHeight = 240;
 		m_OutputWidth = 640;
 		m_OutputHeight = 480;
-		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputWidth, m_InputHeight, RS2_FORMAT_Z16, 30);
-		Cfg.enable_stream(RS2_STREAM_INFRARED, m_InputWidth, m_InputHeight, RS2_FORMAT_Y8, 30);
+		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputDepthWidth, m_InputDepthHeight, RS2_FORMAT_Z16, 30);
+		Cfg.enable_stream(RS2_STREAM_INFRARED, m_InputTexWidth, m_InputTexHeight, RS2_FORMAT_Y8, 30);
 		// No need for AlignTo - IR is automatically aligned with depth
-		m_Renderer.Init(m_InputWidth, m_InputHeight, m_OutputWidth, m_OutputHeight);
+		m_Renderer.Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight);
 		break;
 	case RealSenseCamType::PointCloudColor:
-		m_InputWidth = 320;
-		m_InputHeight = 240;
+		m_InputDepthWidth = 320;
+		m_InputDepthHeight = 240;
+		m_InputTexWidth = 640;
+		m_InputTexHeight = 480;
 		m_OutputWidth = 640;
 		m_OutputHeight = 480;
-		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputWidth, m_InputHeight, RS2_FORMAT_Z16, 30);
-		Cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_RGBA8, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
-		// TODO AlignTo
-		m_Renderer.Init(m_InputWidth, m_InputHeight, m_OutputWidth, m_OutputHeight);
+		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputDepthWidth, m_InputDepthHeight, RS2_FORMAT_Z16, 30);
+		Cfg.enable_stream(RS2_STREAM_COLOR, m_InputTexWidth, m_InputTexHeight, RS2_FORMAT_RGBA8, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
+		m_Renderer.Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight);
 		break;
 	default:
 		assert(false);

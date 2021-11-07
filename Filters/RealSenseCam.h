@@ -33,7 +33,8 @@ private:
 	rs2::pointcloud m_PointCloud;		// RS2 pointcloud helper
 	rs2::points m_Points;				// persist the points between frames in case we want to display again
 	rs2::colorizer m_Colorizer;			// Helper to colorize depth images - not needed when RGB colors are used
-	int m_InputWidth, m_InputHeight;	// Dimensions of the (aligned) input frame - aligned so depth/color frames are the same size
+	int m_InputDepthWidth, m_InputDepthHeight;	// Dimensions of the depth input frame
+	int m_InputTexWidth, m_InputTexHeight;	// Dimensions of the color/IR texture input frame
 	int m_OutputWidth, m_OutputHeight;	// Dimensions of the output video frame (can be different to input frame size for point cloud types)
 										// Needs to match what gets provided in output media sample frame buffer!
 	PointCloudRenderer m_Renderer;		// Custom class that uses Direct3D to project point cloud data to a texture and copy back to the frame

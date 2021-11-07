@@ -20,7 +20,7 @@ public:
 	// TODO could also maybe pass thresholding, clipping values here if they're only set once
 	// TODO currently just sets all points to a predefined color - no per-point color yet
 	// TODO just uses a default camera position, lookat, up - for now
-	HRESULT Init(int inputWidth, int inputHeight, int outputWidth, int outputHeight);
+	HRESULT Init(int inputDepthWidth, int inputDepthHeight, int inputTexWidth, int inputTexHeight, int outputWidth, int outputHeight);
 
 	void UnInit();
 
@@ -44,8 +44,10 @@ private:
 	ID3D11ShaderResourceView* tex_view_ptr = NULL;
 	ID3D11SamplerState* sampler_state_ptr = NULL;
 
-	UINT m_InputWidth;
-	UINT m_InputHeight;
+	UINT m_InputDepthWidth;
+	UINT m_InputDepthHeight;
+	UINT m_InputTexWidth;
+	UINT m_InputTexHeight;
 	UINT m_OutputWidth;
 	UINT m_OutputHeight;
 	float* m_BackgroundColor;

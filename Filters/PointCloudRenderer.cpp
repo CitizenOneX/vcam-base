@@ -9,7 +9,7 @@ struct VertexPositionTexUv {
     DirectX::XMFLOAT2 TexUv;
 };
 
-PointCloudRenderer::PointCloudRenderer() : m_InputWidth(0), m_InputHeight(0), m_OutputWidth(0), m_OutputHeight(0)
+PointCloudRenderer::PointCloudRenderer() : m_InputDepthWidth(0), m_InputDepthHeight(0), m_InputTexWidth(0), m_InputTexHeight(0), m_OutputWidth(0), m_OutputHeight(0)
 {
 }
 
@@ -17,10 +17,12 @@ PointCloudRenderer::~PointCloudRenderer()
 {
 }
 
-HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidth, int outputHeight)
+HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int inputTexWidth, int inputTexHeight, int outputWidth, int outputHeight)
 {
-    m_InputWidth = inputWidth;
-    m_InputHeight = inputHeight;
+    m_InputDepthWidth = inputDepthWidth;
+    m_InputDepthHeight = inputDepthHeight;
+    m_InputTexWidth = inputTexWidth;
+    m_InputTexHeight = inputTexHeight;
     m_OutputWidth = outputWidth;
     m_OutputHeight = outputHeight;
 
@@ -160,7 +162,7 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
 
     // Create dynamic vertex buffer - sized to input width x height
     {
-        int arrayElementCount = m_InputWidth * m_InputHeight;
+        int arrayElementCount = m_InputDepthWidth * m_InputDepthHeight;
         VertexPositionTexUv* vertex_data_array = new VertexPositionTexUv[arrayElementCount];
         ZeroMemory(vertex_data_array, arrayElementCount * sizeof(VertexPositionTexUv));
 
@@ -228,8 +230,8 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
     // Create the Color Texture2D updated each frame with RGB/IR camera and matching SamplerState
     {
         D3D11_TEXTURE2D_DESC texDesc;
-        texDesc.Width = 640;   // TODO pass in texture sizes too?
-        texDesc.Height = 480;
+        texDesc.Width = m_InputTexWidth;
+        texDesc.Height = m_InputTexHeight;
         texDesc.MipLevels = texDesc.ArraySize = 1;
         texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
         texDesc.SampleDesc.Count = 1;
@@ -330,7 +332,7 @@ void PointCloudRenderer::UnInit()
 
 void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFrameLength, const unsigned int pointsCount, const float* pointsXyz, const float* texUvs, const void* color_frame_data, const int color_frame_size)
 {
-    assert(outputFrameBuffer != NULL && pointsXyz != NULL && (pointsCount == m_InputWidth * m_InputHeight) && (outputFrameLength == m_OutputWidth * m_OutputHeight * 3));
+    assert(outputFrameBuffer != NULL && pointsXyz != NULL && (pointsCount == m_InputDepthWidth * m_InputDepthHeight) && (outputFrameLength == m_OutputWidth * m_OutputHeight * 3));
 
     // upload the color texture
     {
@@ -377,7 +379,7 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
     device_context_ptr->ClearRenderTargetView(render_target_view_ptr, m_BackgroundColor);
 
     // draw the points
-    UINT vertex_count = m_InputWidth * m_InputHeight;
+    UINT vertex_count = m_InputDepthWidth * m_InputDepthHeight;
     device_context_ptr->Draw(vertex_count, 0);
 
     // flush the DirectX to the render target
