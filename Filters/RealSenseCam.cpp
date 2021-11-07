@@ -42,7 +42,7 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		m_OutputWidth = 640;
 		m_OutputHeight = 480;
 		// remember color streams go mental if OpenMP is enabled in RS2 build
-		Cfg.enable_stream(RS2_STREAM_COLOR, m_InputWidth, m_InputHeight, RS2_FORMAT_ANY, 30);
+		Cfg.enable_stream(RS2_STREAM_COLOR, m_InputWidth, m_InputHeight, RS2_FORMAT_RGB8, 30);
 		break;
 	case RealSenseCamType::ColorizedDepth:
 		m_InputWidth = 320;
@@ -87,7 +87,7 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		m_OutputWidth = 640;
 		m_OutputHeight = 480;
 		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputWidth, m_InputHeight, RS2_FORMAT_Z16, 30);
-		Cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_ANY, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
+		Cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_RGB8, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
 		// TODO AlignTo
 		m_Renderer.Init(m_InputWidth, m_InputHeight, m_OutputWidth, m_OutputHeight);
 		break;
@@ -191,7 +191,7 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 		}
 		// Upload the vertices to Direct3D
 		// Draw the pointcloud and copy to the framebuffer
-		m_Renderer.RenderFrame(frameBuffer, frameSize, (const float*)m_Points.get_vertices(), pointsCount);
+		m_Renderer.RenderFrame(frameBuffer, frameSize, pointsCount, (const float*)m_Points.get_vertices(), NULL, NULL, 0); // FIXME no color frame
 	}
 	break;
 	case RealSenseCamType::PointCloudIR:
@@ -210,12 +210,12 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 		// Upload the vertices to Direct3D
 		// TODO and the IR frame
 		// Draw the pointcloud and copy to the framebuffer
-		m_Renderer.RenderFrame(frameBuffer, frameSize, (const float*)m_Points.get_vertices(), pointsCount);
+		m_Renderer.RenderFrame(frameBuffer, frameSize, pointsCount, (const float*)m_Points.get_vertices(), NULL, NULL, 0); // FIXME no color frame
 	}
 	break;
 	case RealSenseCamType::PointCloudColor:
 	{
-		auto color = frames.get_color_frame();
+		rs2::video_frame color = frames.get_color_frame();
 		m_PointCloud.map_to(color);
 		auto depth = frames.get_depth_frame();
 		m_Points = m_PointCloud.calculate(depth);
@@ -228,9 +228,8 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 		}
 
 		// Upload the vertices to Direct3D
-		// TODO and the color frame
 		// Draw the pointcloud and copy to the framebuffer
-		m_Renderer.RenderFrame(frameBuffer, frameSize, (const float*)m_Points.get_vertices(), pointsCount);
+		m_Renderer.RenderFrame(frameBuffer, frameSize, pointsCount, (const float*)m_Points.get_vertices(), (const float*)m_Points.get_texture_coordinates(), color.get_data(), color.get_data_size());
 	}
 	break;
 	default:

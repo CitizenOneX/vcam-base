@@ -27,19 +27,22 @@ public:
 	// TODO vertex structures with colour? Separate streams? 
 	// TODO really can pass current depth and color frames and let the shader work out the points, not librealsense
 	// TODO pass near/far clipping, other thresholding?
-	void RenderFrame(BYTE* outputFrameBuffer, const int outputFrameLength, const float* pointsXyz, const unsigned int pointsCount);
+	void RenderFrame(BYTE* outputFrameBuffer, const int outputFrameLength, const unsigned int pointsCount, const float* pointsXyz, const float* texUvs, const void* color_frame_data, const int color_frame_size);
 
 private:
 	// D3D globals
 	ID3D11Device* device_ptr = NULL;
 	ID3D11DeviceContext* device_context_ptr = NULL;
-	ID3D11Texture2D* target_ptr = NULL;
-	ID3D11Texture2D* staging_ptr = NULL;
+	ID3D11Texture2D* target_ptr = NULL;				// render target texture
+	ID3D11Texture2D* staging_ptr = NULL;			// staging copy of render target to pass back to CPU
 	ID3D11RenderTargetView* render_target_view_ptr = NULL;
 	ID3D11VertexShader* vertex_shader_ptr = NULL;
 	ID3D11PixelShader* pixel_shader_ptr = NULL;
 	ID3D11InputLayout* input_layout_ptr = NULL;
 	ID3D11Buffer* vertex_buffer_ptr = NULL;
+	ID3D11Texture2D* color_tex_ptr = NULL;			// RGB(A)?8-formatted data per point (comes off the sensor as RGB8)
+	ID3D11ShaderResourceView* tex_view_ptr = NULL;
+	ID3D11SamplerState* sampler_state_ptr = NULL;
 
 	UINT m_InputWidth;
 	UINT m_InputHeight;

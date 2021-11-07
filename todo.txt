@@ -1,8 +1,12 @@
 TODO
 ====
-- either render to glfw window to show point cloud is working, or go straight to rendering to offscreen render target and copy back to Filter output
+
+- point clouds:
+	- IR   : Need to send: depth frame, IR frame (no need to calculate point cloud if the IR frame is a perfect match for the depth frame, but what about distortion? does the point cloud calculation undistort? If so, that part should still only need to happen once), and either: calculate point cloud for geometry, or calculate geometry in vertex shader
+	- Color: Need to send: depth frame, and either: (color per point), or (color frame + texture coords per point) or (color frame + camera intrinsics + extrinsics depth-to-color and run the algorithm on the receiver)
 - Detect higher resolutions on USB3 and change output size accordingly
 - configure RS profiles - depth cutoffs etc on startup (does this require a processing block, or just sensor config?)
+- consider flipping image/texture in wvp matrix if possible rather than do any reverse iteration
 
 
 DONE
@@ -12,3 +16,4 @@ DONE
 - efficiently send IR feed, colorized depth feed to native-sized output sample (detect 320x240x30? on USB2.1, and detect higher on USB3?)
 - efficiently flip camera feed - no super-efficient reverse memcpy, so just iterating in reverse
 - work out why enabling RS color stream (on its own or with depth too) results in 100% CPU but depth/IR are fine on their own - OpenMP option in librealsense has this known issue. Rebuilt without multiprocessor support
+- render to direct3d window to show point cloud is working, then render to offscreen render target and copy back to Filter output

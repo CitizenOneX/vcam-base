@@ -4,6 +4,11 @@
 #include <DirectXMath.h>    // matrix/vector math
 #include <cassert>
 
+struct VertexPositionTexUv {
+    DirectX::XMFLOAT3 Pos;
+    DirectX::XMFLOAT2 TexUv;
+};
+
 PointCloudRenderer::PointCloudRenderer() : m_InputWidth(0), m_InputHeight(0), m_OutputWidth(0), m_OutputHeight(0)
 {
 }
@@ -133,13 +138,14 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
             &pixel_shader_ptr);
         assert(SUCCEEDED(hr));
 
-        // set up input layout for vertex buffer
+        // set up input layout for vertex shader
         D3D11_INPUT_ELEMENT_DESC inputElementDesc[] = {
-            { "POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            // POS comes in input slot 0 (vertex position buffer)
+            { "SV_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
             /*
-            { "COL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "COL", 0, DXGI_FORMAT_R8G8B8A8_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
             { "NOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
             */
         };
         hr = device_ptr->CreateInputLayout(
@@ -154,13 +160,13 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
 
     // Create dynamic vertex buffer - sized to input width x height
     {
-        int arrayElementCount = m_InputWidth * m_InputHeight * 3;
-        float* vertex_data_array = new float[arrayElementCount];
-        ZeroMemory(vertex_data_array, arrayElementCount * sizeof(float));
+        int arrayElementCount = m_InputWidth * m_InputHeight;
+        VertexPositionTexUv* vertex_data_array = new VertexPositionTexUv[arrayElementCount];
+        ZeroMemory(vertex_data_array, arrayElementCount * sizeof(VertexPositionTexUv));
 
         // create vertex buffer to store the vertex data
         D3D11_BUFFER_DESC vertex_buff_descr = {};
-        vertex_buff_descr.ByteWidth = arrayElementCount * sizeof(float);
+        vertex_buff_descr.ByteWidth = arrayElementCount * sizeof(VertexPositionTexUv);
         vertex_buff_descr.Usage = D3D11_USAGE_DYNAMIC;
         vertex_buff_descr.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         vertex_buff_descr.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -175,7 +181,7 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
         ID3D11Buffer* constant_buffer_ptr = NULL;
         struct VS_CONSTANT_BUFFER
         {
-            DirectX::XMMATRIX mWorldViewProj;
+            DirectX::XMMATRIX worldViewProj;
         };
 
         VS_CONSTANT_BUFFER VsConstData = {};
@@ -191,7 +197,7 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
         float nearZ = 0.1f;
         float farZ = 1000.0f;
         DirectX::XMMATRIX projectionMatrix = DirectX::XMMatrixPerspectiveFovLH(fovRadians, aspectRatio, nearZ, farZ);
-        VsConstData.mWorldViewProj = DirectX::XMMatrixTranspose(world * viewMatrix * projectionMatrix);
+        VsConstData.worldViewProj = DirectX::XMMatrixTranspose(world * viewMatrix * projectionMatrix);
 
         // create the constant buffer descriptor
         D3D11_BUFFER_DESC constant_buff_descr;
@@ -219,6 +225,55 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
         device_context_ptr->VSSetConstantBuffers(0, 1, &constant_buffer_ptr);
     }
 
+    // Create the Color Texture2D updated each frame with RGB/IR camera and matching SamplerState
+    {
+        D3D11_TEXTURE2D_DESC texDesc;
+        texDesc.Width = 640;   // TODO pass in texture sizes too?
+        texDesc.Height = 480;
+        texDesc.MipLevels = texDesc.ArraySize = 1;
+        texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        texDesc.SampleDesc.Count = 1;
+        texDesc.SampleDesc.Quality = 0;
+        texDesc.Usage = D3D11_USAGE_DYNAMIC;
+        texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        texDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        texDesc.MiscFlags = 0;
+
+        HRESULT hr = device_ptr->CreateTexture2D(&texDesc, NULL, &color_tex_ptr);
+        assert(SUCCEEDED(hr));
+
+        // Create a texture sampler state description.
+        D3D11_SAMPLER_DESC samplerDesc;
+        samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+        samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+        samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+        samplerDesc.MipLODBias = 0.0f;
+        samplerDesc.MaxAnisotropy = 1;
+        samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+        samplerDesc.BorderColor[0] = 0;
+        samplerDesc.BorderColor[1] = 0;
+        samplerDesc.BorderColor[2] = 0;
+        samplerDesc.BorderColor[3] = 0;
+        samplerDesc.MinLOD = 0;
+        samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+        // Create the texture sampler state.
+        hr = device_ptr->CreateSamplerState(&samplerDesc, &sampler_state_ptr);
+        assert(SUCCEEDED(hr));
+
+        // Setup the shader resource view description.
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+        srvDesc.Format = texDesc.Format;
+        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Texture2D.MostDetailedMip = 0;
+        srvDesc.Texture2D.MipLevels = -1;
+
+        // Create the shader resource view for the texture.
+        hr = device_ptr->CreateShaderResourceView(color_tex_ptr, &srvDesc, &tex_view_ptr);
+        assert(SUCCEEDED(hr));
+    }
+
     // set background color for point clouds
 #if defined( DEBUG ) || defined( _DEBUG )
     // set the default background color to cornflower blue for Debug builds
@@ -237,15 +292,20 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
         device_context_ptr->OMSetRenderTargets(1, &render_target_view_ptr, NULL);
 
         // set the input assembler
-        UINT vertex_stride = 3 * sizeof(float);
+        UINT vertex_stride = sizeof(VertexPositionTexUv);
         UINT vertex_offset = 0;
         device_context_ptr->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
         device_context_ptr->IASetInputLayout(input_layout_ptr);
         device_context_ptr->IASetVertexBuffers(0, 1, &vertex_buffer_ptr, &vertex_stride, &vertex_offset);
 
+        // set the texture and the sampler
+        device_context_ptr->PSSetShaderResources(0, 1, &tex_view_ptr);
+        device_context_ptr->PSSetSamplers(0, 1, &sampler_state_ptr);
+
         // set the shaders
         device_context_ptr->VSSetShader(vertex_shader_ptr, NULL, 0);
         device_context_ptr->PSSetShader(pixel_shader_ptr, NULL, 0);
+
     }
 
     return S_OK;;
@@ -254,6 +314,9 @@ HRESULT PointCloudRenderer::Init(int inputWidth, int inputHeight, int outputWidt
 void PointCloudRenderer::UnInit()
 {
     if (m_BackgroundColor) delete m_BackgroundColor;
+    if (tex_view_ptr) tex_view_ptr->Release();
+    if (sampler_state_ptr) sampler_state_ptr->Release();
+    if (color_tex_ptr) color_tex_ptr->Release();
     if (render_target_view_ptr) render_target_view_ptr->Release();
     if (vertex_shader_ptr) vertex_shader_ptr->Release();
     if (pixel_shader_ptr) pixel_shader_ptr->Release();
@@ -265,19 +328,47 @@ void PointCloudRenderer::UnInit()
     if (device_ptr) device_ptr->Release();
 }
 
-void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFrameLength, const float* pointsXyz, const unsigned int pointsCount)
+void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFrameLength, const unsigned int pointsCount, const float* pointsXyz, const float* texUvs, const void* color_frame_data, const int color_frame_size)
 {
     assert(outputFrameBuffer != NULL && pointsXyz != NULL && (pointsCount == m_InputWidth * m_InputHeight) && (outputFrameLength == m_OutputWidth * m_OutputHeight * 3));
 
-    // copy/set/map the updated vertex data into the vertex buffer
+    // upload the color texture
     {
-        D3D11_MAPPED_SUBRESOURCE mappedResource;
+        D3D11_MAPPED_SUBRESOURCE mappedResource = { 0 };
+
+        //  Disable GPU access to the texture data.
+        HRESULT hr = device_context_ptr->Map(color_tex_ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+        assert(SUCCEEDED(hr));
+
+        //  Copy over the texture data here.
+        memcpy(mappedResource.pData, color_frame_data, color_frame_size);
+
+        //  Reenable GPU access to the texture data.
+        device_context_ptr->Unmap(color_tex_ptr, 0);
+    }
+
+    // copy/set/map the updated vertex position data into the vertex position buffer
+    {
+        D3D11_MAPPED_SUBRESOURCE mappedResource = { 0 };
 
         //  Disable GPU access to the vertex buffer data.
         HRESULT hr = device_context_ptr->Map(vertex_buffer_ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
         assert(SUCCEEDED(hr));
+
         //  Update the vertex buffer here.
-        memcpy(mappedResource.pData, pointsXyz, (unsigned long long)pointsCount * 3 * sizeof(float));
+        float* data = ((float*)mappedResource.pData);
+        for (unsigned int p = 0; p < pointsCount; p++)
+        {
+            // lay out the points (3 floats) then the tex uvs (2 floats) in the vertex buffer struct
+            // TODO do I need to align these to 16-bytes with filler?
+            data[5 * p] = pointsXyz[3 * p];
+            data[5 * p + 1] = pointsXyz[3 * p + 1];
+            data[5 * p + 2] = pointsXyz[3 * p + 2];
+            data[5 * p + 3] = texUvs[2 * p];
+            data[5 * p + 4] = texUvs[2 * p + 1];
+        }
+        mappedResource.pData = data;
+
         //  Reenable GPU access to the vertex buffer data.
         device_context_ptr->Unmap(vertex_buffer_ptr, 0);
     }
