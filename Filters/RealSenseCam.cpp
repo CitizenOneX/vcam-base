@@ -65,8 +65,8 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 	case RealSenseCamType::PointCloud:
 		m_InputDepthWidth = 320;
 		m_InputDepthHeight = 240;
-		m_InputTexWidth = 0;	// FIXME work out the right way to represent this - no texture stream
-		m_InputTexHeight = 0;
+		m_InputTexWidth = 320;
+		m_InputTexHeight = 240;
 		m_OutputWidth = 640;
 		m_OutputHeight = 480;
 		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputDepthWidth, m_InputDepthHeight, RS2_FORMAT_Z16, 30);
@@ -195,7 +195,7 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 		}
 		// Upload the vertices to Direct3D
 		// Draw the pointcloud and copy to the framebuffer
-		m_Renderer.RenderFrame(frameBuffer, frameSize, pointsCount, (const float*)m_Points.get_vertices(), NULL, NULL, 0); // FIXME no color frame
+		m_Renderer.RenderFrame(frameBuffer, frameSize, pointsCount, (const float*)m_Points.get_vertices(), (const float*)m_Points.get_texture_coordinates(), NULL, 0); // FIXME no color frame
 	}
 	break;
 	case RealSenseCamType::PointCloudIR:
@@ -212,9 +212,8 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 			OutputDebugStringA(rs2_get_error_message(e));
 		}
 		// Upload the vertices to Direct3D
-		// TODO and the IR frame
 		// Draw the pointcloud and copy to the framebuffer
-		m_Renderer.RenderFrame(frameBuffer, frameSize, pointsCount, (const float*)m_Points.get_vertices(), NULL, NULL, 0); // FIXME no color frame
+		m_Renderer.RenderFrame(frameBuffer, frameSize, pointsCount, (const float*)m_Points.get_vertices(), (const float*)m_Points.get_texture_coordinates(), ir.get_data(), ir.get_data_size());
 	}
 	break;
 	case RealSenseCamType::PointCloudColor:

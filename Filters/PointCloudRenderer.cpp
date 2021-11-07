@@ -343,7 +343,29 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
         assert(SUCCEEDED(hr));
 
         //  Copy over the texture data here.
-        memcpy(mappedResource.pData, color_frame_data, color_frame_size);
+        if (color_frame_size == 0)
+        {
+            // Point cloud, no IR or Color frame
+            memset(mappedResource.pData, 255, (size_t)4 * pointsCount);
+        }
+        else if (color_frame_size == pointsCount) 
+        {
+            // IR frame
+            BYTE* data = ((BYTE*)mappedResource.pData);
+            BYTE* colorFrame = (BYTE*)color_frame_data;
+            for (unsigned int i = 0; i < pointsCount; i++)
+            {
+                data[4 * i] = colorFrame[i];
+                data[4 * i + 1] = colorFrame[i];
+                data[4 * i + 2] = colorFrame[i];
+                data[4 * i + 3] = colorFrame[i];
+            }
+        }
+        else
+        {
+            // RGBA color frame
+            memcpy(mappedResource.pData, color_frame_data, color_frame_size);
+        }
 
         //  Reenable GPU access to the texture data.
         device_context_ptr->Unmap(color_tex_ptr, 0);
