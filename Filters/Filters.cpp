@@ -63,10 +63,12 @@ CVCamStream::CVCamStream(HRESULT *phr, CVCam *pParent, LPCWSTR pPinName) :
         GetMediaType(4, &m_mt); // 320x240x3 output size
         break;
     case RealSenseCamType::Color:
+        GetMediaType(8, &m_mt); // 640x480x3 output size
+        break;
     case RealSenseCamType::PointCloud:
     case RealSenseCamType::PointCloudIR:
     case RealSenseCamType::PointCloudColor:
-        GetMediaType(8, &m_mt); // 640x480x3 output size
+        GetMediaType(8, &m_mt); // 640x480x3 output size (TODO it would be nice to increase this)
         break;
     default:
         break;
