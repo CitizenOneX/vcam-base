@@ -9,7 +9,7 @@ struct VertexPositionTexUv {
     DirectX::XMFLOAT2 TexUv;
 };
 
-PointCloudRenderer::PointCloudRenderer() : m_InputDepthWidth(0), m_InputDepthHeight(0), m_InputTexWidth(0), m_InputTexHeight(0), m_OutputWidth(0), m_OutputHeight(0)
+PointCloudRenderer::PointCloudRenderer() : m_InputDepthWidth(0), m_InputDepthHeight(0), m_InputTexWidth(0), m_InputTexHeight(0), m_OutputWidth(0), m_OutputHeight(0), m_ClippingDistanceZ(1.3f)
 {
 }
 
@@ -17,7 +17,7 @@ PointCloudRenderer::~PointCloudRenderer()
 {
 }
 
-HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int inputTexWidth, int inputTexHeight, int outputWidth, int outputHeight)
+HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int inputTexWidth, int inputTexHeight, int outputWidth, int outputHeight, float clippingDistanceZ)
 {
     m_InputDepthWidth = inputDepthWidth;
     m_InputDepthHeight = inputDepthHeight;
@@ -25,6 +25,7 @@ HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int 
     m_InputTexHeight = inputTexHeight;
     m_OutputWidth = outputWidth;
     m_OutputHeight = outputHeight;
+    m_ClippingDistanceZ = clippingDistanceZ;
 
     {
         // Set up Direct3D Device and Device Context
@@ -254,8 +255,8 @@ HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int 
 
         // Set up WVP matrix, camera details
         DirectX::XMMATRIX world = DirectX::XMMatrixIdentity();
-        static DirectX::XMVECTOR eyePos = DirectX::XMVectorSet(0.1f, -0.2f, 0.0f, 0.0f);
-        static DirectX::XMVECTOR lookAtPos = DirectX::XMVectorSet(0.0f, -0.1f, 0.5f, 0.0f); //Look at center of the world
+        static DirectX::XMVECTOR eyePos = DirectX::XMVectorSet(0.05f, 0.0f, 0.0f, 0.0f);
+        static DirectX::XMVECTOR lookAtPos = DirectX::XMVectorSet(0.0f, 0.0f, 0.5f, 0.0f); //Look at center of the world
         static DirectX::XMVECTOR upVector = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); //Positive Y Axis = Up
         DirectX::XMMATRIX viewMatrix = DirectX::XMMatrixLookAtLH(eyePos, lookAtPos, upVector);
         float fovRadians = DirectX::XM_PI / 3.0f; // 60 degree FOV
@@ -440,6 +441,7 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
     }
 
     // copy/set/map the updated vertex position data into the vertex position buffer
+    unsigned int currPoint = 0; // track valid points (exclude distant points)
     {
         D3D11_MAPPED_SUBRESOURCE mappedResource = { 0 };
 
@@ -451,13 +453,18 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
         float* data = ((float*)mappedResource.pData);
         for (unsigned int p = 0; p < pointsCount; p++)
         {
-            // lay out the points (3 floats) then the tex uvs (2 floats) in the vertex buffer struct
-            // TODO do I need to align these to 16-bytes with filler?
-            data[5 * p] = pointsXyz[3 * p];
-            data[5 * p + 1] = pointsXyz[3 * p + 1];
-            data[5 * p + 2] = pointsXyz[3 * p + 2];
-            data[5 * p + 3] = texUvs[2 * p];
-            data[5 * p + 4] = texUvs[2 * p + 1];
+            // only include points less than m_ClippingDistanceZ
+            if (pointsXyz[3 * p + 2] < m_ClippingDistanceZ)
+            {
+                // lay out the points (3 floats) then the tex uvs (2 floats) in the vertex buffer struct
+                // TODO do I need to align these to 16-bytes with filler?
+                data[5 * currPoint] = pointsXyz[3 * p];
+                data[5 * currPoint + 1] = pointsXyz[3 * p + 1];
+                data[5 * currPoint + 2] = pointsXyz[3 * p + 2];
+                data[5 * currPoint + 3] = texUvs[2 * p];
+                data[5 * currPoint + 4] = texUvs[2 * p + 1];
+                currPoint++;
+            }
         }
         mappedResource.pData = data;
 
@@ -470,8 +477,7 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
     device_context_ptr->ClearDepthStencilView(depth_stencil_view_ptr, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     // draw the points
-    UINT vertex_count = m_InputDepthWidth * m_InputDepthHeight;
-    device_context_ptr->Draw(vertex_count, 0);
+    device_context_ptr->Draw(currPoint, 0); // currPoint now holds the total count of valid vertices
 
     // flush the DirectX to the render target
     device_context_ptr->Flush();

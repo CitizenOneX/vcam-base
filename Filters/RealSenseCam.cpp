@@ -18,6 +18,8 @@ RealSenseCam::~RealSenseCam()
 HRESULT RealSenseCam::Init(RealSenseCamType type)
 {
 	m_Type = type;
+	// clip out all points more distant than this in meters
+	float clippingDistanceZ = 1.3f;
 
 	// TODO work out how to get this logging into Debug Output console in VS2019
 	rs2::log_to_console(RS2_LOG_SEVERITY_DEBUG);
@@ -70,7 +72,7 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		m_OutputWidth = 640;
 		m_OutputHeight = 480;
 		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputDepthWidth, m_InputDepthHeight, RS2_FORMAT_Z16, 30);
-		m_Renderer.Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight);
+		m_Renderer.Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight, clippingDistanceZ);
 		break;
 	case RealSenseCamType::PointCloudIR:
 		m_InputDepthWidth = 320;
@@ -82,7 +84,7 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputDepthWidth, m_InputDepthHeight, RS2_FORMAT_Z16, 30);
 		Cfg.enable_stream(RS2_STREAM_INFRARED, m_InputTexWidth, m_InputTexHeight, RS2_FORMAT_Y8, 30);
 		// No need for AlignTo - IR is automatically aligned with depth
-		m_Renderer.Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight);
+		m_Renderer.Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight, clippingDistanceZ);
 		break;
 	case RealSenseCamType::PointCloudColor:
 		m_InputDepthWidth = 320;
@@ -93,7 +95,7 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		m_OutputHeight = 480;
 		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputDepthWidth, m_InputDepthHeight, RS2_FORMAT_Z16, 30);
 		Cfg.enable_stream(RS2_STREAM_COLOR, m_InputTexWidth, m_InputTexHeight, RS2_FORMAT_RGBA8, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
-		m_Renderer.Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight);
+		m_Renderer.Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight, clippingDistanceZ);
 		break;
 	default:
 		assert(false);

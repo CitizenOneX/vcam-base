@@ -10,6 +10,7 @@
 
 // TODO why am I getting rs2 to calculate point cloud and return a flat list of 3d vertices; losing the RGB-D structure?
 // why not just load the depth and colour textures natively and compute vertices and color texture sampling in a shader?
+// well, intrinsics/extrinsics/distortion models are all taken care of by rs2 point cloud calculator, for starters
 class PointCloudRenderer
 {
 public:
@@ -17,10 +18,8 @@ public:
 	~PointCloudRenderer();
 
 	// TODO really here I just need to know the vertex structure (if we're going with that)
-	// TODO could also maybe pass thresholding, clipping values here if they're only set once
-	// TODO currently just sets all points to a predefined color - no per-point color yet
 	// TODO just uses a default camera position, lookat, up - for now
-	HRESULT Init(int inputDepthWidth, int inputDepthHeight, int inputTexWidth, int inputTexHeight, int outputWidth, int outputHeight);
+	HRESULT Init(int inputDepthWidth, int inputDepthHeight, int inputTexWidth, int inputTexHeight, int outputWidth, int outputHeight, float clippingDistanceZ);
 
 	void UnInit();
 
@@ -53,6 +52,7 @@ private:
 	UINT m_InputTexHeight;
 	UINT m_OutputWidth;
 	UINT m_OutputHeight;
+	float m_ClippingDistanceZ;
 	float* m_BackgroundColor;
 
 	void convert32bppToRGB(BYTE* frameBuffer, int frameSize, BYTE* pData, int pixelCount);
