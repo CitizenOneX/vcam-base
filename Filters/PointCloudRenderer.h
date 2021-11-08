@@ -34,6 +34,7 @@ private:
 	ID3D11Device* device_ptr = NULL;
 	ID3D11DeviceContext* device_context_ptr = NULL;
 	ID3D11Texture2D* target_ptr = NULL;				// render target texture
+	ID3D11Texture2D* depth_stencil_ptr = NULL;		// render target depth stencil texture
 	ID3D11Texture2D* staging_ptr = NULL;			// staging copy of render target to pass back to CPU
 	ID3D11RenderTargetView* render_target_view_ptr = NULL;
 	ID3D11VertexShader* vertex_shader_ptr = NULL;
@@ -43,6 +44,8 @@ private:
 	ID3D11Texture2D* color_tex_ptr = NULL;			// RGB(A)?8-formatted data per point (comes off the sensor as RGB8)
 	ID3D11ShaderResourceView* tex_view_ptr = NULL;
 	ID3D11SamplerState* sampler_state_ptr = NULL;
+	ID3D11DepthStencilState* depth_stencil_state_ptr = NULL;
+	ID3D11DepthStencilView* depth_stencil_view_ptr = NULL;
 
 	UINT m_InputDepthWidth;
 	UINT m_InputDepthHeight;

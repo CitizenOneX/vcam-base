@@ -26,56 +26,121 @@ HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int 
     m_OutputWidth = outputWidth;
     m_OutputHeight = outputHeight;
 
-    // Set up Direct3D Device and Device Context
     {
-        D3D_FEATURE_LEVEL feature_level;
-        UINT flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
+        // Set up Direct3D Device and Device Context
+        {
+            D3D_FEATURE_LEVEL feature_level;
+            UINT flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
 #if defined( DEBUG ) || defined( _DEBUG )
-        flags |= D3D11_CREATE_DEVICE_DEBUG;
+            flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
-        HRESULT hr = D3D11CreateDevice(
-            NULL,
-            D3D_DRIVER_TYPE_HARDWARE,
-            NULL,
-            flags,
-            NULL,
-            0,
-            D3D11_SDK_VERSION,
-            &device_ptr,
-            &feature_level,
-            &device_context_ptr);
-        assert(S_OK == hr && device_ptr && device_context_ptr);
+            HRESULT hr = D3D11CreateDevice(
+                NULL,
+                D3D_DRIVER_TYPE_HARDWARE,
+                NULL,
+                flags,
+                NULL,
+                0,
+                D3D11_SDK_VERSION,
+                &device_ptr,
+                &feature_level,
+                &device_context_ptr);
+            assert(S_OK == hr && device_ptr && device_context_ptr);
+        }
 
-        // Create the render target texture (which will be copied back to caller's output frame)
-        D3D11_TEXTURE2D_DESC desc_target = {};
-        desc_target.Width = outputWidth;
-        desc_target.Height = outputHeight;
-        desc_target.ArraySize = 1;
-        desc_target.SampleDesc.Count = 1;
-        desc_target.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // .... DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-        desc_target.BindFlags = D3D11_BIND_RENDER_TARGET;
-        desc_target.Usage = D3D11_USAGE_DEFAULT;
-        hr = device_ptr->CreateTexture2D(&desc_target, nullptr, &target_ptr);
-        assert(SUCCEEDED(hr));
+        // Render Target
+        {
+            // Create the render target texture (which will be copied back to caller's output frame)
+            D3D11_TEXTURE2D_DESC desc_target = {};
+            desc_target.Width = outputWidth;
+            desc_target.Height = outputHeight;
+            desc_target.ArraySize = 1;
+            desc_target.SampleDesc.Count = 1;
+            desc_target.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // .... DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+            desc_target.BindFlags = D3D11_BIND_RENDER_TARGET;
+            desc_target.Usage = D3D11_USAGE_DEFAULT;
+            HRESULT hr = device_ptr->CreateTexture2D(&desc_target, nullptr, &target_ptr);
+            assert(SUCCEEDED(hr));
+        }
+
+        // depth stencil
+        {
+            // Create the depth stencil for the render target
+            D3D11_TEXTURE2D_DESC desc_depth;
+            desc_depth.Width = outputWidth;
+            desc_depth.Height = outputHeight;
+            desc_depth.MipLevels = 1;
+            desc_depth.ArraySize = 1;
+            desc_depth.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+            desc_depth.SampleDesc.Count = 1;
+            desc_depth.SampleDesc.Quality = 0;
+            desc_depth.Usage = D3D11_USAGE_DEFAULT;
+            desc_depth.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+            desc_depth.CPUAccessFlags = 0;
+            desc_depth.MiscFlags = 0;
+            HRESULT hr = device_ptr->CreateTexture2D(&desc_depth, NULL, &depth_stencil_ptr);
+            assert(SUCCEEDED(hr));
+
+            D3D11_DEPTH_STENCIL_DESC depth_stencil_desc;
+
+            // Depth test parameters
+            depth_stencil_desc.DepthEnable = true;
+            depth_stencil_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+            depth_stencil_desc.DepthFunc = D3D11_COMPARISON_LESS;
+
+            // Stencil test parameters
+            depth_stencil_desc.StencilEnable = true;
+            depth_stencil_desc.StencilReadMask = 0xFF;
+            depth_stencil_desc.StencilWriteMask = 0xFF;
+
+            // Stencil operations if pixel is front-facing
+            depth_stencil_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+            depth_stencil_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+            depth_stencil_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+            depth_stencil_desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+            // Stencil operations if pixel is back-facing
+            depth_stencil_desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+            depth_stencil_desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+            depth_stencil_desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+            depth_stencil_desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+            // Create depth stencil state
+            hr = device_ptr->CreateDepthStencilState(&depth_stencil_desc, &depth_stencil_state_ptr);
+            assert(SUCCEEDED(hr));
+
+            // Create the depth stencil view
+            D3D11_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc;
+            depth_stencil_view_desc.Format = desc_depth.Format;
+            depth_stencil_view_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+            depth_stencil_view_desc.Texture2D.MipSlice = 0;
+            depth_stencil_view_desc.Flags = 0;
+
+            hr = device_ptr->CreateDepthStencilView(depth_stencil_ptr, // Depth stencil texture
+                &depth_stencil_view_desc, // Depth stencil desc
+                &depth_stencil_view_ptr);  // [out] Depth stencil view
+            assert(SUCCEEDED(hr));
+        }
 
         // Create the Staging texture, we resource-copy GPU->GPU from target to staging, then read from staging
         // at our leisure
-        D3D11_TEXTURE2D_DESC desc_staging = {};
-        desc_staging.Width = outputWidth;
-        desc_staging.Height = outputHeight;
-        desc_staging.ArraySize = 1;
-        desc_staging.SampleDesc.Count = 1;
-        desc_staging.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // .... DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-        desc_staging.BindFlags = 0;
-        desc_staging.Usage = D3D11_USAGE_STAGING;
-        desc_staging.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-        hr = device_ptr->CreateTexture2D(&desc_staging, nullptr, &staging_ptr);
-        assert(SUCCEEDED(hr));
+        {
+            D3D11_TEXTURE2D_DESC desc_staging = {};
+            desc_staging.Width = outputWidth;
+            desc_staging.Height = outputHeight;
+            desc_staging.ArraySize = 1;
+            desc_staging.SampleDesc.Count = 1;
+            desc_staging.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // .... DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+            desc_staging.BindFlags = 0;
+            desc_staging.Usage = D3D11_USAGE_STAGING;
+            desc_staging.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+            HRESULT hr = device_ptr->CreateTexture2D(&desc_staging, nullptr, &staging_ptr);
+            assert(SUCCEEDED(hr));
 
-        // create and set the render target view
-        hr = device_ptr->CreateRenderTargetView(target_ptr, nullptr, &render_target_view_ptr);
-        assert(SUCCEEDED(hr));
-        device_context_ptr->OMSetRenderTargets(1, &render_target_view_ptr, nullptr);
+            // create and set the render target view
+            hr = device_ptr->CreateRenderTargetView(target_ptr, nullptr, &render_target_view_ptr);
+            assert(SUCCEEDED(hr));
+        }
     }
 
     // Compile the Shaders
@@ -159,7 +224,6 @@ HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int 
         assert(SUCCEEDED(hr));
     }
 
-
     // Create dynamic vertex buffer - sized to input width x height
     {
         int arrayElementCount = m_InputDepthWidth * m_InputDepthHeight;
@@ -197,7 +261,7 @@ HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int 
         float fovRadians = DirectX::XM_PIDIV2; // 90 degree FOV
         float aspectRatio = static_cast<float>(m_OutputWidth) / static_cast<float>(m_OutputHeight);
         float nearZ = 0.1f;
-        float farZ = 1000.0f;
+        float farZ = 20.0f;
         DirectX::XMMATRIX projectionMatrix = DirectX::XMMatrixPerspectiveFovLH(fovRadians, aspectRatio, nearZ, farZ);
         VsConstData.worldViewProj = DirectX::XMMatrixTranspose(world * viewMatrix * projectionMatrix);
 
@@ -291,7 +355,8 @@ HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int 
         device_context_ptr->RSSetViewports(1, &viewport);
 
         // set the output merger
-        device_context_ptr->OMSetRenderTargets(1, &render_target_view_ptr, NULL);
+        device_context_ptr->OMSetDepthStencilState(depth_stencil_state_ptr, 1);
+        device_context_ptr->OMSetRenderTargets(1, &render_target_view_ptr, depth_stencil_view_ptr);
 
         // set the input assembler
         UINT vertex_stride = sizeof(VertexPositionTexUv);
@@ -317,6 +382,8 @@ void PointCloudRenderer::UnInit()
 {
     if (m_BackgroundColor) delete m_BackgroundColor;
     if (tex_view_ptr) tex_view_ptr->Release();
+    if (depth_stencil_state_ptr) depth_stencil_state_ptr->Release();
+    if (depth_stencil_view_ptr) depth_stencil_view_ptr->Release();
     if (sampler_state_ptr) sampler_state_ptr->Release();
     if (color_tex_ptr) color_tex_ptr->Release();
     if (render_target_view_ptr) render_target_view_ptr->Release();
@@ -325,6 +392,7 @@ void PointCloudRenderer::UnInit()
     if (input_layout_ptr) input_layout_ptr->Release();
     if (vertex_buffer_ptr) vertex_buffer_ptr->Release();
     if (staging_ptr) staging_ptr->Release();
+    if (depth_stencil_ptr) depth_stencil_ptr->Release();
     if (target_ptr) target_ptr->Release();
     if (device_context_ptr) device_context_ptr->Release();
     if (device_ptr) device_ptr->Release();
@@ -345,12 +413,12 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
         //  Copy over the texture data here.
         if (color_frame_size == 0)
         {
-            // Point cloud, no IR or Color frame
+            // Point cloud, no IR or Color frame, set the texture to opaque white
             memset(mappedResource.pData, 255, (size_t)4 * pointsCount);
         }
         else if (color_frame_size == pointsCount) 
         {
-            // IR frame
+            // IR frame: copy Y8 value over to RGB (and set A to 255)
             BYTE* data = ((BYTE*)mappedResource.pData);
             BYTE* colorFrame = (BYTE*)color_frame_data;
             for (unsigned int i = 0; i < pointsCount; i++)
@@ -399,6 +467,7 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
 
     // clear to the background color
     device_context_ptr->ClearRenderTargetView(render_target_view_ptr, m_BackgroundColor);
+    device_context_ptr->ClearDepthStencilView(depth_stencil_view_ptr, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     // draw the points
     UINT vertex_count = m_InputDepthWidth * m_InputDepthHeight;
