@@ -254,11 +254,11 @@ HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int 
 
         // Set up WVP matrix, camera details
         DirectX::XMMATRIX world = DirectX::XMMatrixIdentity();
-        static DirectX::XMVECTOR eyePos = DirectX::XMVectorSet(0.1f, -0.1f, 0.0f, 0.0f);
-        static DirectX::XMVECTOR lookAtPos = DirectX::XMVectorSet(0.0f, 0.0f, 0.4f, 0.0f); //Look at center of the world
+        static DirectX::XMVECTOR eyePos = DirectX::XMVectorSet(0.1f, -0.2f, 0.0f, 0.0f);
+        static DirectX::XMVECTOR lookAtPos = DirectX::XMVectorSet(0.0f, -0.1f, 0.5f, 0.0f); //Look at center of the world
         static DirectX::XMVECTOR upVector = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); //Positive Y Axis = Up
         DirectX::XMMATRIX viewMatrix = DirectX::XMMatrixLookAtLH(eyePos, lookAtPos, upVector);
-        float fovRadians = DirectX::XM_PIDIV2; // 90 degree FOV
+        float fovRadians = DirectX::XM_PI / 3.0f; // 60 degree FOV
         float aspectRatio = static_cast<float>(m_OutputWidth) / static_cast<float>(m_OutputHeight);
         float nearZ = 0.1f;
         float farZ = 20.0f;
@@ -342,8 +342,8 @@ HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int 
 
     // set background color for point clouds
 #if defined( DEBUG ) || defined( _DEBUG )
-    // set the default background color to cornflower blue for Debug builds
-    m_BackgroundColor = new float[] { 0x64 / 255.0f, 0x95 / 255.0f, 0xED / 255.0f, 1.0f };
+    // set the default background color to quarter cornflower blue for Debug builds
+    m_BackgroundColor = new float[] { 0x64 / 255.0f / 4.0f, 0x95 / 255.0f / 4.0f, 0xED / 255.0f / 4.0f, 1.0f };
 #else
     // set the default background color to black for Release builds
     m_BackgroundColor = new float[] { 0.0f, 0.0f, 0.0f, 1.0f };
