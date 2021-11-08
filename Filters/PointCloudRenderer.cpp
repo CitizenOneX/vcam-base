@@ -426,7 +426,7 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
                 data[4 * i] = colorFrame[i];
                 data[4 * i + 1] = colorFrame[i];
                 data[4 * i + 2] = colorFrame[i];
-                data[4 * i + 3] = colorFrame[i];
+                data[4 * i + 3] = 255;
             }
         }
         else
