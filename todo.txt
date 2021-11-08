@@ -1,9 +1,8 @@
 TODO
 ====
-- work out better camera orientation, projection matrices
-- consider flipping image/texture in wvp matrix if possible rather than do any reverse iteration
-- configure RS profiles - depth cutoffs etc on startup (does this require a processing block, or just sensor config?)
-- Detect higher resolutions on USB3 and change output size accordingly
+- figure out how to get large output textures (larger than 640x480) for point cloud Types, since rendering can be arbitrarily hi-res
+- consider flipping image/texture in wvp matrix if possible rather than do any reverse iteration (GPU flip then a memcpy, rather than reverse iteration?)
+- Detect higher resolutions on USB3 and change input/output sizes accordingly
 
 
 DONE
@@ -17,3 +16,6 @@ DONE
 - point clouds:
 	- IR   : Need to send: depth frame, IR frame (no need to calculate point cloud if the IR frame is a perfect match for the depth frame, but what about distortion? does the point cloud calculation undistort? If so, that part should still only need to happen once), and either: calculate point cloud for geometry, or calculate geometry in vertex shader
 	- Color: Need to send: depth frame, and either: (color per point), or (color frame + texture coords per point) or (color frame + camera intrinsics + extrinsics depth-to-color and run the algorithm on the receiver)
+- work out better camera orientation, projection matrices
+- flip X to simulate "mirror mode"
+- configure RS sensor presets - depth cutoffs etc on startup (does this require a processing block, or just sensor config?) - just depth culling vertices for now, no preset change
