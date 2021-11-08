@@ -254,7 +254,8 @@ HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int 
         VS_CONSTANT_BUFFER VsConstData = {};
 
         // Set up WVP matrix, camera details
-        DirectX::XMMATRIX world = DirectX::XMMatrixIdentity();
+        //DirectX::XMMATRIX world = DirectX::XMMatrixIdentity(); // no reflection
+        DirectX::XMMATRIX world = {-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}; // reflect about x ("mirror mode")
         static DirectX::XMVECTOR eyePos = DirectX::XMVectorSet(0.05f, 0.0f, 0.0f, 0.0f);
         static DirectX::XMVECTOR lookAtPos = DirectX::XMVectorSet(0.0f, 0.0f, 0.5f, 0.0f); //Look at center of the world
         static DirectX::XMVECTOR upVector = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); //Positive Y Axis = Up
