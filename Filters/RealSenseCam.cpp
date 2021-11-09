@@ -72,7 +72,8 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		m_OutputWidth = 640;
 		m_OutputHeight = 480;
 		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputDepthWidth, m_InputDepthHeight, RS2_FORMAT_Z16, 30);
-		m_Renderer.Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight, clippingDistanceZ);
+		m_Renderer = new PointCloudRenderer();
+		m_Renderer->Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight, clippingDistanceZ);
 		break;
 	case RealSenseCamType::PointCloudIR:
 		m_InputDepthWidth = 320;
@@ -84,7 +85,8 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputDepthWidth, m_InputDepthHeight, RS2_FORMAT_Z16, 30);
 		Cfg.enable_stream(RS2_STREAM_INFRARED, m_InputTexWidth, m_InputTexHeight, RS2_FORMAT_Y8, 30);
 		// No need for AlignTo - IR is automatically aligned with depth
-		m_Renderer.Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight, clippingDistanceZ);
+		m_Renderer = new PointCloudRenderer();
+		m_Renderer->Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight, clippingDistanceZ);
 		break;
 	case RealSenseCamType::PointCloudColor:
 		m_InputDepthWidth = 320;
@@ -95,7 +97,8 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 		m_OutputHeight = 480;
 		Cfg.enable_stream(RS2_STREAM_DEPTH, m_InputDepthWidth, m_InputDepthHeight, RS2_FORMAT_Z16, 30);
 		Cfg.enable_stream(RS2_STREAM_COLOR, m_InputTexWidth, m_InputTexHeight, RS2_FORMAT_RGBA8, 30);  // remember color streams go mental if OpenMP is enabled in RS2 build
-		m_Renderer.Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight, clippingDistanceZ);
+		m_Renderer = new PointCloudRenderer();
+		m_Renderer->Init(m_InputDepthWidth, m_InputDepthHeight, m_InputTexWidth, m_InputTexHeight, m_OutputWidth, m_OutputHeight, clippingDistanceZ);
 		break;
 	default:
 		assert(false);
@@ -138,9 +141,10 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 void RealSenseCam::UnInit()
 {
 	// uninit the point cloud renderer if it was initialized
-	if (m_Type == RealSenseCamType::PointCloud || m_Type == RealSenseCamType::PointCloudIR || m_Type == RealSenseCamType::PointCloudColor)
+	if (m_Renderer)
 	{
-		m_Renderer.UnInit();
+		m_Renderer->UnInit();
+		delete m_Renderer;
 	}
 
 	// stop the realsense pipeline
@@ -200,7 +204,7 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 		}
 		// Upload the vertices to Direct3D
 		// Draw the pointcloud and copy to the framebuffer
-		m_Renderer.RenderFrame(frameBuffer, frameSize, pointsCount, (const float*)m_Points.get_vertices(), (const float*)m_Points.get_texture_coordinates(), NULL, 0); // FIXME no color frame
+		m_Renderer->RenderFrame(frameBuffer, frameSize, pointsCount, (const float*)m_Points.get_vertices(), (const float*)m_Points.get_texture_coordinates(), NULL, 0); // FIXME no color frame
 	}
 	break;
 	case RealSenseCamType::PointCloudIR:
@@ -218,7 +222,7 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 		}
 		// Upload the vertices to Direct3D
 		// Draw the pointcloud and copy to the framebuffer
-		m_Renderer.RenderFrame(frameBuffer, frameSize, pointsCount, (const float*)m_Points.get_vertices(), (const float*)m_Points.get_texture_coordinates(), ir.get_data(), ir.get_data_size());
+		m_Renderer->RenderFrame(frameBuffer, frameSize, pointsCount, (const float*)m_Points.get_vertices(), (const float*)m_Points.get_texture_coordinates(), ir.get_data(), ir.get_data_size());
 	}
 	break;
 	case RealSenseCamType::PointCloudColor:
@@ -237,7 +241,7 @@ void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
 
 		// Upload the vertices to Direct3D
 		// Draw the pointcloud and copy to the framebuffer
-		m_Renderer.RenderFrame(frameBuffer, frameSize, pointsCount, (const float*)m_Points.get_vertices(), (const float*)m_Points.get_texture_coordinates(), color.get_data(), color.get_data_size());
+		m_Renderer->RenderFrame(frameBuffer, frameSize, pointsCount, (const float*)m_Points.get_vertices(), (const float*)m_Points.get_texture_coordinates(), color.get_data(), color.get_data_size());
 	}
 	break;
 	default:

@@ -37,7 +37,7 @@ private:
 	int m_InputTexWidth, m_InputTexHeight;	// Dimensions of the color/IR texture input frame
 	int m_OutputWidth, m_OutputHeight;	// Dimensions of the output video frame (can be different to input frame size for point cloud types)
 										// Needs to match what gets provided in output media sample frame buffer!
-	PointCloudRenderer m_Renderer;		// Custom class that uses Direct3D to project point cloud data to a texture and copy back to the frame
+	PointCloudRenderer* m_Renderer = NULL;		// Custom class that uses Direct3D to project point cloud data to a texture and copy back to the frame
 
 	// helper functions for mapping RS frames to output directshow frames (includes inverting etc.)
 	void invert8bppToRGB(BYTE* frameBuffer, int frameSize, rs2::video_frame frame);
