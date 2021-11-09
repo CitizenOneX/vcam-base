@@ -384,8 +384,9 @@ void PointCloudRenderer::UnInit()
 {
     if (m_BackgroundColor) delete m_BackgroundColor;
     if (tex_view_ptr) tex_view_ptr->Release();
-    if (depth_stencil_state_ptr) depth_stencil_state_ptr->Release();
     if (depth_stencil_view_ptr) depth_stencil_view_ptr->Release();
+    if (depth_stencil_state_ptr) depth_stencil_state_ptr->Release();
+    if (depth_stencil_ptr) depth_stencil_ptr->Release();
     if (sampler_state_ptr) sampler_state_ptr->Release();
     if (color_tex_ptr) color_tex_ptr->Release();
     if (render_target_view_ptr) render_target_view_ptr->Release();
@@ -394,7 +395,6 @@ void PointCloudRenderer::UnInit()
     if (input_layout_ptr) input_layout_ptr->Release();
     if (vertex_buffer_ptr) vertex_buffer_ptr->Release();
     if (staging_ptr) staging_ptr->Release();
-    if (depth_stencil_ptr) depth_stencil_ptr->Release();
     if (target_ptr) target_ptr->Release();
     if (device_context_ptr) device_context_ptr->Release();
     if (device_ptr) device_ptr->Release();
