@@ -137,8 +137,11 @@ HRESULT RealSenseCam::Init(RealSenseCamType type)
 
 void RealSenseCam::UnInit()
 {
-	// uninit the point cloud renderer
-	m_Renderer.UnInit();
+	// uninit the point cloud renderer if it was initialized
+	if (m_Type == RealSenseCamType::PointCloud || m_Type == RealSenseCamType::PointCloudIR || m_Type == RealSenseCamType::PointCloudColor)
+	{
+		m_Renderer.UnInit();
+	}
 
 	// stop the realsense pipeline
 	m_Pipe.stop();
