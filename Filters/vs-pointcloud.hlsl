@@ -1,11 +1,3 @@
-Texture2D colorTex: register(t0);
-SamplerState colorTexSampler : register(s0)
-{
-    Filter = MIN_MAG_MIP_LINEAR;
-    AddressU = Wrap;
-    AddressV = Wrap;
-};
-
 cbuffer VS_CONSTANT_BUFFER : register(b0)
 {
     matrix worldViewProj;
@@ -23,7 +15,7 @@ struct vs_out {
     float2 color_tex_uv : TEXCOORD0;
 };
 
-vs_out vs_main(vs_in input) {
+vs_out main(vs_in input) {
     // TODO if calculating point cloud geometry, use SV_VertexID %/div width 
     // to compute x,y position of vertex #ID, then we only need to pass depth frame
     // And then fill a separate color buffer as well (or texcoord and texture)
@@ -33,9 +25,4 @@ vs_out vs_main(vs_in input) {
     output.position_clip = mul(float4(input.position_local, 1.0), worldViewProj);
     output.color_tex_uv = input.color_tex_uv;
     return output;
-}
-
-float4 ps_main(vs_out input) : SV_TARGET {
-    // sample the texture to assign the color
-    return colorTex.Sample(colorTexSampler, input.color_tex_uv); // must return an RGBA colour
 }

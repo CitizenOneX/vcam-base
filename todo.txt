@@ -1,6 +1,6 @@
 TODO
 ====
-- get the filter working in Zoom again!
+- consider a drifting camera to give a bit more of a 3D feel
 - figure out how to get large output textures (larger than 640x480) for point cloud Types, since rendering can be arbitrarily hi-res
 - consider flipping image/texture in wvp matrix if possible rather than do any reverse iteration (GPU flip then a memcpy, rather than reverse iteration?)
 - Detect higher resolutions on USB3 and change input/output sizes accordingly
@@ -20,3 +20,4 @@ DONE
 - work out better camera orientation, projection matrices
 - flip X to simulate "mirror mode"
 - configure RS sensor presets - depth cutoffs etc on startup (does this require a processing block, or just sensor config?) - just depth culling vertices for now, no preset change
+- get the filter working in Zoom again! - Yes, it was an HLSL path issue. pre-compile the shaders and include them as headers to make all this go away.

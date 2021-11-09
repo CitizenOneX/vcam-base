@@ -1,4 +1,6 @@
 #include "PointCloudRenderer.h"
+#include "vs-pointcloud.h"
+#include "ps-pointcloud.h"
 
 #include <d3dcompiler.h>    // shader compiler
 #include <DirectXMath.h>    // matrix/vector math
@@ -145,65 +147,16 @@ HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int 
     }
 
     // Compile the Shaders
+    // NB. the shaders are compiled from HLSL files into .h header files at build time
+    // otherwise at runtime the .hlsl or .cso files need to be located from the current
+    // directory which can be a pain
     {
-        UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined( DEBUG ) || defined( _DEBUG )
-        flags |= D3DCOMPILE_DEBUG; // add more debug output
-#endif
-        ID3DBlob* vs_blob_ptr = NULL, * ps_blob_ptr = NULL, * error_blob = NULL;
-
         // COMPILE VERTEX SHADER
-        HRESULT hr = D3DCompileFromFile(
-            L"pointcloud.hlsl",
-            nullptr,
-            D3D_COMPILE_STANDARD_FILE_INCLUDE,
-            "vs_main",
-            "vs_5_0",
-            flags,
-            0,
-            &vs_blob_ptr,
-            &error_blob);
-        if (FAILED(hr)) {
-            if (error_blob) {
-                OutputDebugStringA((char*)error_blob->GetBufferPointer());
-                error_blob->Release();
-            }
-            if (vs_blob_ptr) { vs_blob_ptr->Release(); }
-            assert(false);
-        }
-
-        // COMPILE PIXEL SHADER
-        hr = D3DCompileFromFile(
-            L"pointcloud.hlsl",
-            nullptr,
-            D3D_COMPILE_STANDARD_FILE_INCLUDE,
-            "ps_main",
-            "ps_5_0",
-            flags,
-            0,
-            &ps_blob_ptr,
-            &error_blob);
-        if (FAILED(hr)) {
-            if (error_blob) {
-                OutputDebugStringA((char*)error_blob->GetBufferPointer());
-                error_blob->Release();
-            }
-            if (ps_blob_ptr) { ps_blob_ptr->Release(); }
-            assert(false);
-        }
-
-        hr = device_ptr->CreateVertexShader(
-            vs_blob_ptr->GetBufferPointer(),
-            vs_blob_ptr->GetBufferSize(),
-            NULL,
-            &vertex_shader_ptr);
+        HRESULT hr = device_ptr->CreateVertexShader(g_vertex_shader, sizeof(g_vertex_shader) / sizeof(BYTE), nullptr, &vertex_shader_ptr);
         assert(SUCCEEDED(hr));
 
-        hr = device_ptr->CreatePixelShader(
-            ps_blob_ptr->GetBufferPointer(),
-            ps_blob_ptr->GetBufferSize(),
-            NULL,
-            &pixel_shader_ptr);
+        // COMPILE PIXEL SHADER
+        hr = device_ptr->CreatePixelShader(g_pixel_shader, sizeof(g_pixel_shader) / sizeof(BYTE), nullptr, &pixel_shader_ptr);
         assert(SUCCEEDED(hr));
 
         // set up input layout for vertex shader
@@ -219,8 +172,8 @@ HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int 
         hr = device_ptr->CreateInputLayout(
             inputElementDesc,
             ARRAYSIZE(inputElementDesc),
-            vs_blob_ptr->GetBufferPointer(),
-            vs_blob_ptr->GetBufferSize(),
+            g_vertex_shader,
+            sizeof(g_vertex_shader) / sizeof(BYTE),
             &input_layout_ptr);
         assert(SUCCEEDED(hr));
     }
@@ -390,9 +343,9 @@ void PointCloudRenderer::UnInit()
     if (sampler_state_ptr) sampler_state_ptr->Release();
     if (color_tex_ptr) color_tex_ptr->Release();
     if (render_target_view_ptr) render_target_view_ptr->Release();
+    if (input_layout_ptr) input_layout_ptr->Release();
     if (vertex_shader_ptr) vertex_shader_ptr->Release();
     if (pixel_shader_ptr) pixel_shader_ptr->Release();
-    if (input_layout_ptr) input_layout_ptr->Release();
     if (vertex_buffer_ptr) vertex_buffer_ptr->Release();
     if (staging_ptr) staging_ptr->Release();
     if (target_ptr) target_ptr->Release();
