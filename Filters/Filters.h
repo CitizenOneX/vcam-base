@@ -19,7 +19,7 @@ public:
     IFilterGraph *GetGraph() {return m_pGraph;}
 
     RealSenseCam m_realSenseCam;
-    RealSenseCamType m_type = RealSenseCamType::PointCloudColor;
+    RealSenseCamType m_type = RealSenseCamType::Color;
     bool m_connected;
 
 private:

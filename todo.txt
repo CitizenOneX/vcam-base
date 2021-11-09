@@ -1,5 +1,6 @@
 TODO
 ====
+- get the filter working in Zoom again!
 - figure out how to get large output textures (larger than 640x480) for point cloud Types, since rendering can be arbitrarily hi-res
 - consider flipping image/texture in wvp matrix if possible rather than do any reverse iteration (GPU flip then a memcpy, rather than reverse iteration?)
 - Detect higher resolutions on USB3 and change input/output sizes accordingly
