@@ -148,7 +148,14 @@ void RealSenseCam::UnInit()
 	}
 
 	// stop the realsense pipeline
-	m_Pipe.stop();
+	try
+	{
+		m_Pipe.stop();
+	}
+	catch (const std::exception&)
+	{
+		// well, we tried. no need to throw an exception on shutdown
+	}
 }
 
 void RealSenseCam::GetCamFrame(BYTE* frameBuffer, int frameSize)
