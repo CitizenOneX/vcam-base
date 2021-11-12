@@ -11,6 +11,12 @@ struct VertexPositionTexUv {
     DirectX::XMFLOAT2 TexUv;
 };
 
+struct VS_CONSTANT_BUFFER
+{
+    DirectX::XMMATRIX worldViewProj;
+};
+
+
 PointCloudRenderer::PointCloudRenderer() : m_InputDepthWidth(0), m_InputDepthHeight(0), m_InputTexWidth(0), m_InputTexHeight(0), m_OutputWidth(0), m_OutputHeight(0), m_ClippingDistanceZ(1.3f)
 {
 }
@@ -29,8 +35,8 @@ HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int 
     m_OutputHeight = outputHeight;
     m_ClippingDistanceZ = clippingDistanceZ;
 
+    // Set up Direct3D Device and Device Context
     {
-        // Set up Direct3D Device and Device Context
         {
             D3D_FEATURE_LEVEL feature_level;
             UINT flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
@@ -198,34 +204,31 @@ HRESULT PointCloudRenderer::Init(int inputDepthWidth, int inputDepthHeight, int 
 
     // constant buffer for world view projection matrix 
     {
-        ID3D11Buffer* constant_buffer_ptr = NULL;
-        struct VS_CONSTANT_BUFFER
-        {
-            DirectX::XMMATRIX worldViewProj;
-        };
-
         VS_CONSTANT_BUFFER VsConstData = {};
 
         // Set up WVP matrix, camera details
-        //DirectX::XMMATRIX world = DirectX::XMMatrixIdentity(); // no reflection
-        DirectX::XMMATRIX world = {-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}; // reflect about x ("mirror mode")
-        static DirectX::XMVECTOR eyePos = DirectX::XMVectorSet(0.05f, 0.0f, 0.0f, 0.0f);
-        static DirectX::XMVECTOR lookAtPos = DirectX::XMVectorSet(0.0f, 0.0f, 0.5f, 0.0f); //Look at center of the world
-        static DirectX::XMVECTOR upVector = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); //Positive Y Axis = Up
-        DirectX::XMMATRIX viewMatrix = DirectX::XMMatrixLookAtLH(eyePos, lookAtPos, upVector);
+        world = DirectX::XMMatrixIdentity(); // no reflection
+        //DirectX::XMMATRIX world = {-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}; // reflect about x ("mirror mode")
+
+        eyePos = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+        lookAtPos = DirectX::XMVectorSet(0.0f, 0.0f, 0.5f, 0.0f); //Look at center of the world
+        upVector = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); //Positive Y Axis = Up
+        view = DirectX::XMMatrixLookAtLH(eyePos, lookAtPos, upVector);
+
         float fovRadians = DirectX::XM_PI / 3.0f; // 60 degree FOV
         float aspectRatio = static_cast<float>(m_OutputWidth) / static_cast<float>(m_OutputHeight);
         float nearZ = 0.1f;
         float farZ = 20.0f;
-        DirectX::XMMATRIX projectionMatrix = DirectX::XMMatrixPerspectiveFovLH(fovRadians, aspectRatio, nearZ, farZ);
-        VsConstData.worldViewProj = DirectX::XMMatrixTranspose(world * viewMatrix * projectionMatrix);
+        projection = DirectX::XMMatrixPerspectiveFovLH(fovRadians, aspectRatio, nearZ, farZ);
+
+        VsConstData.worldViewProj = DirectX::XMMatrixTranspose(world * view * projection);
 
         // create the constant buffer descriptor
         D3D11_BUFFER_DESC constant_buff_descr;
         constant_buff_descr.ByteWidth = sizeof(VS_CONSTANT_BUFFER);
-        constant_buff_descr.Usage = D3D11_USAGE_DYNAMIC;        // TODO only if the camera details are dynamic
+        constant_buff_descr.Usage = D3D11_USAGE_DEFAULT;
         constant_buff_descr.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        constant_buff_descr.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        constant_buff_descr.CPUAccessFlags = 0;
         constant_buff_descr.MiscFlags = 0;
         constant_buff_descr.StructureByteStride = 0;
 
@@ -344,6 +347,7 @@ void PointCloudRenderer::UnInit()
     if (color_tex_ptr) color_tex_ptr->Release();
     if (render_target_view_ptr) render_target_view_ptr->Release();
     if (input_layout_ptr) input_layout_ptr->Release();
+    if (constant_buffer_ptr) constant_buffer_ptr->Release();
     if (vertex_shader_ptr) vertex_shader_ptr->Release();
     if (pixel_shader_ptr) pixel_shader_ptr->Release();
     if (vertex_buffer_ptr) vertex_buffer_ptr->Release();
@@ -424,6 +428,31 @@ void PointCloudRenderer::RenderFrame(BYTE* outputFrameBuffer, const int outputFr
 
         //  Reenable GPU access to the vertex buffer data.
         device_context_ptr->Unmap(vertex_buffer_ptr, 0);
+    }
+
+    // update the camera position with a bit of drift
+    {
+        // Update our time
+        static float t = 0.0f;
+        {
+            static ULONGLONG timeStart = 0;
+            ULONGLONG timeCur = GetTickCount64();
+            if (timeStart == 0)
+                timeStart = timeCur;
+            t = (timeCur - timeStart) / 1000.0f;
+        }
+
+        // TODO UpdateSubresource (with DEFAULT buffer usage) works smoothly straight away,
+        // but the Map/Unmap approach with DYNAMIC buffer usage resulted in choppy performance.
+        // This is the opposite of what's suggested by the documentation from what I can tell.
+
+        // move the camera eyePos around in a dizzying circle (just a demo!)
+        // calculate and copy the updated wvp matrix
+        VS_CONSTANT_BUFFER VsConstData = {};
+        eyePos = DirectX::XMVectorSet(DirectX::XMScalarSinEst(t/2.0f) / 5.0f, -0.2f + DirectX::XMScalarCosEst(t/2.0f) / 5.0f, 0.0f, 0.0f); // FIXME rotate an amount based on a time interval!
+        view = DirectX::XMMatrixLookAtLH(eyePos, lookAtPos, upVector);
+        VsConstData.worldViewProj = DirectX::XMMatrixTranspose(world * view * projection);
+        device_context_ptr->UpdateSubresource(constant_buffer_ptr, 0, nullptr, &VsConstData, 0, 0);
     }
 
     // clear to the background color

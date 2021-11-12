@@ -7,6 +7,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <d3d11.h>          // D3D interface
+#include <DirectXMath.h>    // matrix/vector math
 
 // TODO why am I getting rs2 to calculate point cloud and return a flat list of 3d vertices; losing the RGB-D structure?
 // why not just load the depth and colour textures natively and compute vertices and color texture sampling in a shader?
@@ -40,11 +41,18 @@ private:
 	ID3D11PixelShader* pixel_shader_ptr = NULL;
 	ID3D11InputLayout* input_layout_ptr = NULL;
 	ID3D11Buffer* vertex_buffer_ptr = NULL;
+	ID3D11Buffer* constant_buffer_ptr = NULL;
 	ID3D11Texture2D* color_tex_ptr = NULL;			// RGB(A)?8-formatted data per point (comes off the sensor as RGB8)
 	ID3D11ShaderResourceView* tex_view_ptr = NULL;
 	ID3D11SamplerState* sampler_state_ptr = NULL;
 	ID3D11DepthStencilState* depth_stencil_state_ptr = NULL;
 	ID3D11DepthStencilView* depth_stencil_view_ptr = NULL;
+	DirectX::XMMATRIX world; 
+	DirectX::XMMATRIX view;
+	DirectX::XMMATRIX projection;
+	DirectX::XMVECTOR eyePos;
+	DirectX::XMVECTOR lookAtPos;
+	DirectX::XMVECTOR upVector;
 
 	UINT m_InputDepthWidth;
 	UINT m_InputDepthHeight;
